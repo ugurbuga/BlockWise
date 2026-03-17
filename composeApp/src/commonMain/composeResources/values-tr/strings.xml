@@ -1,0 +1,42 @@
+<resources>
+    <string name="app_title">BlockWise</string>
+    <string name="score">Skor: %1$d</string>
+    <string name="grid_size">Izgara Boyutu</string>
+    <string name="grid_size_option">%1$dx%1$d</string>
+
+    <string name="difficulty">Zorluk</string>
+    <string name="difficulty_easy">Kolay</string>
+    <string name="difficulty_normal">Normal</string>
+    <string name="difficulty_hard">Zor</string>
+
+    <string name="rules">Kurallar</string>
+    <string name="back">Geri</string>
+    <string name="menu">Menü</string>
+    <string name="play">Oyna</string>
+    <string name="level_selection_title">Seviye Seçimi</string>
+
+    <string name="new_game">Yeni Oyun</string>
+    <string name="select_piece">Parça seç</string>
+
+    <string name="invalid_placement">Geçersiz yerleştirme</string>
+    <string name="invalid_placement_out_of_bounds">Izgaranın dışına taşıyor.</string>
+    <string name="invalid_placement_overlap">Mevcut bloklarla çakışıyor.</string>
+
+    <string name="rule_color_limit">Bir satırda aynı renkten %1$d adetten fazla blok olamaz.</string>
+    <string name="rule_color_limit_col">Bir sütunda aynı renkten %1$d adetten fazla blok olamaz.</string>
+
+    <string name="game_over">Oyun Bitti</string>
+    <string name="no_moves_left">Kalan parçalar için geçerli hamle yok.</string>
+    <string name="game_over_no_moves">%1$s: %2$s</string>
+
+    <string name="rules_title">Blok Mantık Kuralları</string>
+    <string name="rules_intro">Parçaları ızgaraya yerleştir. Satır veya sütunları doldurarak temizle.</string>
+    <string name="rules_rule_1_title">Renk limiti</string>
+    <string name="rules_rule_1_desc_disabled">Kolay: satır renk limiti yok.</string>
+    <string name="rules_rule_1_desc_enabled">Bir satırda aynı renkten %1$d adetten fazla blok olamaz.</string>
+    <string name="rules_rule_2_title">Sütun limiti</string>
+    <string name="rules_rule_2_desc_disabled">Kolay: sütun renk limiti yok.</string>
+    <string name="rules_rule_2_desc_enabled">Bir sütunda aynı renkten %1$d adetten fazla blok olamaz.</string>
+    <string name="rules_tips_title">İpuçları</string>
+    <string name="rules_tips_desc">Kalan parçalardan hiçbiri hiçbir yere yerleştirilemiyorsa oyun biter.</string>
+</resources>
