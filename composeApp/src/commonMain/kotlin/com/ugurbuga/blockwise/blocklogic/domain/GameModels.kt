@@ -29,8 +29,11 @@ data class Grid(
 
 data class PlacementResult(
     val grid: Grid,
-    val clearedRows: Int,
-    val clearedCols: Int,
+    val placedGrid: Grid = grid,
+    val clearedRowIndices: Set<Int> = emptySet(),
+    val clearedColIndices: Set<Int> = emptySet(),
+    val clearedRows: Int = clearedRowIndices.size,
+    val clearedCols: Int = clearedColIndices.size,
     val ruleViolation: RuleViolation? = null,
 )
 

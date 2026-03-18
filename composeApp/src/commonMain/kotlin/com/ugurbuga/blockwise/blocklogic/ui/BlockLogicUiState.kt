@@ -15,5 +15,8 @@ data class BlockLogicUiState(
     val selectedPieceIndex: Int?,
     val validOrigins: Set<CellCoord>,
     val validCells: Set<CellCoord>,
+    val clearingRows: Set<Int>,
+    val clearingCols: Set<Int>,
+    val isAnimatingClear: Boolean,
     val isGameOver: Boolean,
 )

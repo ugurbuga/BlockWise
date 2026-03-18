@@ -104,7 +104,7 @@ object GameEngine {
         rules: GameRules,
     ): PlacementResult {
         if (validatePlacement(grid, piece, originX, originY, rules) != null) {
-            return PlacementResult(grid = grid, clearedRows = 0, clearedCols = 0)
+            return PlacementResult(grid = grid)
         }
 
         val placed = grid.cells.mapIndexed { y, row ->
@@ -118,8 +118,6 @@ object GameEngine {
         if (violation != null) {
             return PlacementResult(
                 grid = grid,
-                clearedRows = 0,
-                clearedCols = 0,
                 ruleViolation = violation,
             )
         }
@@ -128,8 +126,6 @@ object GameEngine {
         if (colViolation != null) {
             return PlacementResult(
                 grid = grid,
-                clearedRows = 0,
-                clearedCols = 0,
                 ruleViolation = colViolation,
             )
         }
@@ -146,8 +142,9 @@ object GameEngine {
 
         return PlacementResult(
             grid = Grid(size = grid.size, cells = cleared),
-            clearedRows = fullRows.size,
-            clearedCols = fullCols.size,
+            placedGrid = Grid(size = grid.size, cells = placed),
+            clearedRowIndices = fullRows,
+            clearedColIndices = fullCols,
         )
     }
 

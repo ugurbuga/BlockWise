@@ -28,6 +28,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -86,7 +88,6 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private data class PieceLayoutInfo(
-    val topLeftInRoot: Offset,
     val sizePx: IntSize,
 )
 
@@ -95,15 +96,14 @@ private data class PieceSpan(
     val heightCells: Int,
 )
 
+private data class PieceContentSize(
+    val widthPx: Float,
+    val heightPx: Float,
+)
+
 private data class DragPlacement(
     val originX: Int,
     val originY: Int,
-)
-
-private data class DragAnchor(
-    val dx: Int,
-    val dy: Int,
-    val fingerToCellCenter: Offset,
 )
 
 internal data class GridAxisGeometry(
@@ -150,66 +150,41 @@ internal fun resolveSnappedOriginAxis(
     return resolved.coerceIn(0, maxOrigin)
 }
 
-private fun resolveFingerCellAxis(
-    targetCenter: Float,
-    axis: GridAxisGeometry,
-    cellSize: Float,
-    gridCount: Int,
-): Int? {
-    if (gridCount <= 0) return null
-    val firstCenter = axis.firstStart + cellSize / 2f
-    val minCenter = firstCenter - axis.step
-    val maxCenter = firstCenter + (gridCount - 1) * axis.step + axis.step
-    if (targetCenter < minCenter || targetCenter > maxCenter) return null
-
-    val resolved = ((targetCenter - firstCenter) / axis.step).roundToInt()
-    return resolved.coerceIn(0, gridCount - 1)
-}
-
 internal fun resolveDraggedOriginAxis(
-    fingerInRoot: Float,
-    fingerToAnchorCellCenter: Float,
-    cellCenters: List<Float>,
-    anchorCellOffset: Int,
+    targetContentStart: Float,
+    axisStarts: List<Float>,
     pieceSpanCells: Int,
 ): Int? {
-    if (cellCenters.isEmpty()) return null
-    val sortedCenters = cellCenters.sorted()
-    val targetCenter = fingerInRoot + fingerToAnchorCellCenter
-    val tolerance = if (sortedCenters.size >= 2) {
-        sortedCenters.zipWithNext { a, b -> b - a }
-            .average()
-            .toFloat()
-    } else {
-        0f
+    if (axisStarts.isEmpty()) return null
+    val candidateCount = (axisStarts.size - pieceSpanCells + 1).coerceAtLeast(0)
+    if (candidateCount == 0) return null
+    val candidateStarts = axisStarts.sorted().take(candidateCount)
+    return candidateStarts.indices.minByOrNull { index ->
+        abs(candidateStarts[index] - targetContentStart)
     }
-    if (
-        tolerance > 0f &&
-            (targetCenter < sortedCenters.first() - tolerance || targetCenter > sortedCenters.last() + tolerance)
-    ) {
-        return null
-    }
-    val anchorCell = sortedCenters.indices.minByOrNull { index ->
-        abs(sortedCenters[index] - targetCenter)
-    } ?: return null
-    val maxOrigin = (sortedCenters.size - pieceSpanCells).coerceAtLeast(0)
-    return (anchorCell - anchorCellOffset).coerceIn(0, maxOrigin)
 }
 
-private fun measuredCellCenters(
+internal fun normalizeDragStartOffsetInContent(
+    startOffsetInPiece: Float,
+    pieceContainerInsetPx: Float,
+    contentSizePx: Float,
+): Float {
+    return (startOffsetInPiece - pieceContainerInsetPx).coerceIn(0f, contentSizePx)
+}
+
+private fun measuredAxisStarts(
     axisStarts: Map<Int, Float>,
-    cellSize: Float,
     gridCount: Int,
     fallbackAxis: GridAxisGeometry,
 ): List<Float> {
-    val measuredCenters = (0 until gridCount).mapNotNull { index ->
-        axisStarts[index]?.plus(cellSize / 2f)
+    val measuredStarts = (0 until gridCount).mapNotNull { index ->
+        axisStarts[index]
     }
-    if (measuredCenters.size == gridCount) {
-        return measuredCenters
+    if (measuredStarts.size == gridCount) {
+        return measuredStarts
     }
     return List(gridCount) { index ->
-        fallbackAxis.firstStart + fallbackAxis.step * index + cellSize / 2f
+        fallbackAxis.firstStart + fallbackAxis.step * index
     }
 }
 
@@ -319,7 +294,7 @@ fun BlockLogicContent(
     var draggingOffsetPx by remember { mutableStateOf(Offset.Zero) }
     var dragStartFingerInRoot by remember { mutableStateOf<Offset?>(null) }
     var dragStartOffsetInPiece by remember { mutableStateOf<Offset?>(null) }
-    var dragAnchor by remember { mutableStateOf<DragAnchor?>(null) }
+    var dragStartOffsetInContent by remember { mutableStateOf<Offset?>(null) }
     var dragSnappedPlacement by remember { mutableStateOf<DragPlacement?>(null) }
 
     val gridCount = state.gridSize.value
@@ -342,7 +317,7 @@ fun BlockLogicContent(
         draggingOffsetPx = Offset.Zero
         dragStartFingerInRoot = null
         dragStartOffsetInPiece = null
-        dragAnchor = null
+        dragStartOffsetInContent = null
         dragSnappedPlacement = null
     }
 
@@ -372,69 +347,46 @@ fun BlockLogicContent(
         }
     }
 
-    fun detectDragAnchor(piece: Piece, startOffsetPx: Offset): DragAnchor {
-        val geometry = measuredGridGeometry()
-        val fallbackCellSizePx = if (gridSizePx.width > 0 && gridCount > 0) {
-            ((gridSizePx.width.toFloat() - gridGapPx * (gridCount - 1)) / gridCount).coerceAtLeast(0f)
-        } else {
-            with(density) { 16.dp.toPx() }
-        }
-        val cellW = geometry?.cellWidth ?: fallbackCellSizePx
-        val cellH = geometry?.cellHeight ?: fallbackCellSizePx
-        val stepX = geometry?.x?.step ?: (cellW + gridGapPx)
-        val stepY = geometry?.y?.step ?: (cellH + gridGapPx)
-        val localInContent = startOffsetPx - Offset(pieceContainerInsetPx, pieceContainerInsetPx)
-
-        val nearest = piece.shape.cells.minByOrNull { cell ->
-            val center = Offset(
-                x = cell.dx * stepX + cellW / 2f,
-                y = cell.dy * stepY + cellH / 2f,
-            )
-            val dx = center.x - localInContent.x
-            val dy = center.y - localInContent.y
-            dx * dx + dy * dy
-        } ?: piece.shape.cells.first()
-
-        val nearestCenter = Offset(
-            x = nearest.dx * stepX + cellW / 2f,
-            y = nearest.dy * stepY + cellH / 2f,
+    fun measuredPieceContentSize(piece: Piece): PieceContentSize? {
+        val geometry = measuredGridGeometry() ?: return null
+        val span = piece.spanInCells()
+        return PieceContentSize(
+            widthPx = geometry.cellWidth * span.widthCells + gridGapPx * (span.widthCells - 1).coerceAtLeast(0),
+            heightPx = geometry.cellHeight * span.heightCells + gridGapPx * (span.heightCells - 1).coerceAtLeast(0),
         )
+    }
 
-        return DragAnchor(
-            dx = nearest.dx,
-            dy = nearest.dy,
-            fingerToCellCenter = nearestCenter - localInContent,
+    fun snappedOverlayTopLeftInRoot(placement: DragPlacement): Offset? {
+        val originColX = gridColXs[placement.originX] ?: return null
+        val originRowY = gridRowYs[placement.originY] ?: return null
+        return Offset(
+            x = originColX - pieceContainerInsetPx,
+            y = originRowY - pieceContainerInsetPx,
         )
     }
 
     fun computeDragPlacement(piece: Piece, fingerInRoot: Offset): DragPlacement? {
         val geometry = measuredGridGeometry() ?: return null
         val span = piece.spanInCells()
-        val anchor = dragAnchor ?: return null
-        val xCenters = measuredCellCenters(
+        val startOffsetInContent = dragStartOffsetInContent ?: return null
+        val xStarts = measuredAxisStarts(
             axisStarts = gridColXs,
-            cellSize = geometry.cellWidth,
             gridCount = gridCount,
             fallbackAxis = geometry.x,
         )
-        val yCenters = measuredCellCenters(
+        val yStarts = measuredAxisStarts(
             axisStarts = gridRowYs,
-            cellSize = geometry.cellHeight,
             gridCount = gridCount,
             fallbackAxis = geometry.y,
         )
         val originX = resolveDraggedOriginAxis(
-            fingerInRoot = fingerInRoot.x,
-            fingerToAnchorCellCenter = anchor.fingerToCellCenter.x,
-            cellCenters = xCenters,
-            anchorCellOffset = anchor.dx,
+            targetContentStart = fingerInRoot.x - startOffsetInContent.x,
+            axisStarts = xStarts,
             pieceSpanCells = span.widthCells,
         ) ?: return null
         val originY = resolveDraggedOriginAxis(
-            fingerInRoot = fingerInRoot.y,
-            fingerToAnchorCellCenter = anchor.fingerToCellCenter.y,
-            cellCenters = yCenters,
-            anchorCellOffset = anchor.dy,
+            targetContentStart = fingerInRoot.y - startOffsetInContent.y,
+            axisStarts = yStarts,
             pieceSpanCells = span.heightCells,
         ) ?: return null
 
@@ -504,6 +456,8 @@ fun BlockLogicContent(
             GridView(
                 grid = state.grid,
                 validCells = state.validCells,
+                clearingRows = state.clearingRows,
+                clearingCols = state.clearingCols,
                 onCellTapped = onCellTapped,
                 onCellMeasured = { x, y, topLeftInRoot, sizePx ->
                     if (x == 0 && y == 0) {
@@ -530,7 +484,7 @@ fun BlockLogicContent(
                 onPieceMeasured = { index, info -> pieceLayoutInfos[index] = info },
                 onPieceCoordinates = { index, coords -> pieceCoordinates[index] = coords },
                 onDragStart = { index, startOffsetPx ->
-                    if (!state.isGameOver) {
+                    if (!state.isGameOver && !state.isAnimatingClear) {
                         onPieceSelected(index)
                         draggingPieceIndex = index
                         draggingOffsetPx = Offset.Zero
@@ -540,7 +494,22 @@ fun BlockLogicContent(
                         dragStartOffsetInPiece = startOffsetPx
 
                         val piece = state.pieces.getOrNull(index)
-                        dragAnchor = piece?.let { detectDragAnchor(it, startOffsetPx) }
+                        dragStartOffsetInContent = piece?.let { draggedPiece ->
+                            measuredPieceContentSize(draggedPiece)?.let { contentSize ->
+                                Offset(
+                                    x = normalizeDragStartOffsetInContent(
+                                        startOffsetInPiece = startOffsetPx.x,
+                                        pieceContainerInsetPx = pieceContainerInsetPx,
+                                        contentSizePx = contentSize.widthPx,
+                                    ),
+                                    y = normalizeDragStartOffsetInContent(
+                                        startOffsetInPiece = startOffsetPx.y,
+                                        pieceContainerInsetPx = pieceContainerInsetPx,
+                                        contentSizePx = contentSize.heightPx,
+                                    ),
+                                )
+                            }
+                        }
                         dragSnappedPlacement = if (piece != null && startFinger != null) {
                             computeDragPlacement(piece, startFinger)
                         } else {
@@ -619,39 +588,45 @@ fun BlockLogicContent(
             val startFingerInRoot = dragStartFingerInRoot
             if (piece != null && info != null && startFingerInRoot != null) {
                 val fingerInRoot = startFingerInRoot + draggingOffsetPx
+                val freeOverlayTopLeftInRoot = freeOverlayTopLeftInRoot(fingerInRoot, info)
+                val freeOverlayTopLeftLocal = freeOverlayTopLeftInRoot - contentTopLeftInRoot
                 val placement = dragSnappedPlacement
-                val overlayTopLeftInRoot = placement?.let {
-                    val originColX = gridColXs[it.originX]
-                    val originRowY = gridRowYs[it.originY]
-                    if (originColX != null && originRowY != null) {
-                        Offset(
-                            x = originColX - pieceContainerInsetPx,
-                            y = originRowY - pieceContainerInsetPx,
-                        )
-                    } else {
-                        freeOverlayTopLeftInRoot(fingerInRoot, info)
-                    }
-                } ?: freeOverlayTopLeftInRoot(fingerInRoot, info)
-                val overlayTopLeftLocal = overlayTopLeftInRoot - contentTopLeftInRoot
+                val snappedOverlayTopLeftLocal = placement
+                    ?.let(::snappedOverlayTopLeftInRoot)
+                    ?.minus(contentTopLeftInRoot)
                 val dragCellLabels = placement?.let { piece.boardCoordLabelsAt(it.originX, it.originY) }.orEmpty()
+
+                if (snappedOverlayTopLeftLocal != null) {
+                    Box(
+                        modifier = Modifier
+                            .graphicsLayer {
+                                translationX = snappedOverlayTopLeftLocal.x
+                                translationY = snappedOverlayTopLeftLocal.y
+                                alpha = 0.35f
+                            }
+                            .zIndex(9f)
+                            .border(pieceContainerBorderDp, MaterialTheme.colorScheme.primary)
+                            .padding(pieceContainerPaddingDp)
+                    ) {
+                        PiecePreview(piece, cellSize = gridCellSizeDp, cellLabels = dragCellLabels)
+                    }
+                }
 
                 Box(
                     modifier = Modifier
-                        .offset {
-                            IntOffset(
-                                x = overlayTopLeftLocal.x.roundToInt(),
-                                y = overlayTopLeftLocal.y.roundToInt(),
-                            )
-                        }
                         .graphicsLayer {
-                            alpha = 1f
-                            shadowElevation = 12f
+                            translationX = freeOverlayTopLeftLocal.x
+                            translationY = freeOverlayTopLeftLocal.y
+                            alpha = 0.94f
+                            shadowElevation = 16f
+                            scaleX = 1.02f
+                            scaleY = 1.02f
                         }
                         .zIndex(10f)
                         .border(pieceContainerBorderDp, MaterialTheme.colorScheme.primary)
                         .padding(pieceContainerPaddingDp)
                 ) {
-                    PiecePreview(piece, cellSize = gridCellSizeDp, cellLabels = dragCellLabels)
+                    PiecePreview(piece, cellSize = gridCellSizeDp)
                 }
             }
         }
@@ -689,6 +664,8 @@ private fun GridSizeMenu(
 private fun GridView(
     grid: com.ugurbuga.blockwise.blocklogic.domain.Grid,
     validCells: Set<com.ugurbuga.blockwise.blocklogic.domain.CellCoord>,
+    clearingRows: Set<Int>,
+    clearingCols: Set<Int>,
     onCellTapped: (x: Int, y: Int) -> Unit,
     onCellMeasured: (x: Int, y: Int, topLeftInRoot: Offset, sizePx: IntSize) -> Unit,
     modifier: Modifier = Modifier,
@@ -700,10 +677,20 @@ private fun GridView(
                 for (x in 0 until size) {
                     val cell = grid[x, y]
                     val isValidCell = validCells.any { it.x == x && it.y == y }
+                    val isClearingCell = y in clearingRows || x in clearingCols
+                    val clearProgress by animateFloatAsState(
+                        targetValue = if (isClearingCell) 0f else 1f,
+                        animationSpec = tween(durationMillis = 220),
+                    )
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .aspectRatio(1f)
+                            .graphicsLayer {
+                                alpha = clearProgress
+                                scaleX = 0.85f + 0.15f * clearProgress
+                                scaleY = 0.85f + 0.15f * clearProgress
+                            }
                             .onGloballyPositioned { coords ->
                                 onCellMeasured(x, y, coords.positionInRoot(), coords.size)
                             }
@@ -802,7 +789,6 @@ private fun PiecesRow(
                         onPieceMeasured(
                             index,
                             PieceLayoutInfo(
-                                topLeftInRoot = coords.positionInRoot(),
                                 sizePx = coords.size,
                             )
                         )
@@ -903,6 +889,9 @@ private fun BlockLogicContentPreview() {
             selectedPieceIndex = 1,
             validOrigins = emptySet(),
             validCells = emptySet(),
+            clearingRows = emptySet(),
+            clearingCols = emptySet(),
+            isAnimatingClear = false,
             isGameOver = false,
         ),
         snackbarHostState = SnackbarHostState(),

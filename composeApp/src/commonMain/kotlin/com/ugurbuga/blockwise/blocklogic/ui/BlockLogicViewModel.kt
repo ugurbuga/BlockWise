@@ -1,13 +1,13 @@
 package com.ugurbuga.blockwise.blocklogic.ui
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.ugurbuga.blockwise.blocklogic.domain.CellCoord
 import com.ugurbuga.blockwise.blocklogic.domain.Difficulty
 import com.ugurbuga.blockwise.blocklogic.domain.GameEngine
 import com.ugurbuga.blockwise.blocklogic.domain.GridSize
 import com.ugurbuga.blockwise.blocklogic.domain.Piece
 import com.ugurbuga.blockwise.blocklogic.domain.PlacementFailure
-import com.ugurbuga.blockwise.blocklogic.domain.RuleViolation
 import com.ugurbuga.blockwise.blocklogic.domain.toRules
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +15,10 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+private const val CLEAR_ANIMATION_DURATION_MS = 220L
 
 class BlockLogicViewModel(
     initialSize: GridSize = GridSize(10),
@@ -41,6 +45,7 @@ class BlockLogicViewModel(
 
     fun onPieceSelected(index: Int) {
         val state = _uiState.value
+        if (state.isAnimatingClear) return
         val rules = state.difficulty.toRules()
         val piece = state.pieces.getOrNull(index)
         val validOrigins = if (piece != null) GameEngine.findValidOrigins(state.grid, piece, rules) else emptySet()
@@ -59,7 +64,7 @@ class BlockLogicViewModel(
 
     private fun placePieceAt(pieceIndex: Int?, x: Int, y: Int, source: String) {
         val state = _uiState.value
-        if (state.isGameOver) return
+        if (state.isGameOver || state.isAnimatingClear) return
 
         val rules = state.difficulty.toRules()
         val resolvedIndex = pieceIndex ?: run {
@@ -109,19 +114,54 @@ class BlockLogicViewModel(
         }
 
         val isGameOver = !GameEngine.hasAnyValidMove(result.grid, newPieces, rules)
-        if (isGameOver) {
-            _viewEvent.tryEmit(BlockLogicViewEvent.GameOver)
+        val hasClearAnimation = result.clearedRowIndices.isNotEmpty() || result.clearedColIndices.isNotEmpty()
+
+        if (!hasClearAnimation) {
+            if (isGameOver) {
+                _viewEvent.tryEmit(BlockLogicViewEvent.GameOver)
+            }
+
+            _uiState.value = state.copy(
+                grid = result.grid,
+                score = newScore,
+                pieces = newPieces,
+                selectedPieceIndex = null,
+                validOrigins = emptySet(),
+                validCells = emptySet(),
+                clearingRows = emptySet(),
+                clearingCols = emptySet(),
+                isAnimatingClear = false,
+                isGameOver = isGameOver,
+            )
+            return
         }
 
         _uiState.value = state.copy(
-            grid = result.grid,
+            grid = result.placedGrid,
             score = newScore,
             pieces = newPieces,
             selectedPieceIndex = null,
             validOrigins = emptySet(),
             validCells = emptySet(),
-            isGameOver = isGameOver,
+            clearingRows = result.clearedRowIndices,
+            clearingCols = result.clearedColIndices,
+            isAnimatingClear = true,
+            isGameOver = false,
         )
+
+        viewModelScope.launch {
+            delay(CLEAR_ANIMATION_DURATION_MS)
+            _uiState.value = _uiState.value.copy(
+                grid = result.grid,
+                clearingRows = emptySet(),
+                clearingCols = emptySet(),
+                isAnimatingClear = false,
+                isGameOver = isGameOver,
+            )
+            if (isGameOver) {
+                _viewEvent.tryEmit(BlockLogicViewEvent.GameOver)
+            }
+        }
     }
 
     private fun newState(size: GridSize, difficulty: Difficulty): BlockLogicUiState {
@@ -138,11 +178,14 @@ class BlockLogicViewModel(
             selectedPieceIndex = null,
             validOrigins = emptySet(),
             validCells = emptySet(),
+            clearingRows = emptySet(),
+            clearingCols = emptySet(),
+            isAnimatingClear = false,
             isGameOver = isGameOver,
         )
     }
 
-    private fun toValidCells(origins: Set<CellCoord>, piece: com.ugurbuga.blockwise.blocklogic.domain.Piece): Set<CellCoord> {
+    private fun toValidCells(origins: Set<CellCoord>, piece: Piece): Set<CellCoord> {
         val result = HashSet<CellCoord>()
         origins.forEach { origin ->
             piece.shape.cells.forEach { offset ->

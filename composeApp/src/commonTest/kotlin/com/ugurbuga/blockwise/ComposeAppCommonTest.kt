@@ -1,10 +1,13 @@
 package com.ugurbuga.blockwise
 
+import com.ugurbuga.blockwise.blocklogic.domain.Shapes
 import com.ugurbuga.blockwise.blocklogic.ui.GridAxisGeometry
+import com.ugurbuga.blockwise.blocklogic.ui.normalizeDragStartOffsetInContent
 import com.ugurbuga.blockwise.blocklogic.ui.resolveDraggedOriginAxis
 import com.ugurbuga.blockwise.blocklogic.ui.resolveSnappedOriginAxis
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ComposeAppCommonTest {
 
@@ -59,16 +62,22 @@ class ComposeAppCommonTest {
 
     @Test
     fun `drag snapping reaches right edge even when grab point is near piece right side`() {
-        val cellCenters = List(10) { index -> 100f + index * 34f + 16f }
-        val fingerToAnchorCellCenter = -14f
+        val axisStarts = listOf(100f, 134f, 168f, 202f, 236f, 270f, 304f, 338f, 372f, 406f)
 
         assertEquals(
             7,
             resolveDraggedOriginAxis(
-                fingerInRoot = cellCenters[9] - fingerToAnchorCellCenter,
-                fingerToAnchorCellCenter = fingerToAnchorCellCenter,
-                cellCenters = cellCenters,
-                anchorCellOffset = 2,
+                targetContentStart = axisStarts[7],
+                axisStarts = axisStarts,
+                pieceSpanCells = 3,
+            )
+        )
+
+        assertEquals(
+            7,
+            resolveDraggedOriginAxis(
+                targetContentStart = axisStarts[7] + 20f,
+                axisStarts = axisStarts,
                 pieceSpanCells = 3,
             )
         )
@@ -76,67 +85,148 @@ class ComposeAppCommonTest {
 
     @Test
     fun `drag snapping reaches left edge with same off center grab point`() {
-        val cellCenters = List(10) { index -> 100f + index * 34f + 16f }
-        val fingerToAnchorCellCenter = -14f
+        val axisStarts = listOf(100f, 134f, 168f, 202f, 236f, 270f, 304f, 338f, 372f, 406f)
 
         assertEquals(
             0,
             resolveDraggedOriginAxis(
-                fingerInRoot = cellCenters[0] - fingerToAnchorCellCenter,
-                fingerToAnchorCellCenter = fingerToAnchorCellCenter,
-                cellCenters = cellCenters,
-                anchorCellOffset = 0,
+                targetContentStart = axisStarts[0],
+                axisStarts = axisStarts,
                 pieceSpanCells = 3,
             )
         )
     }
 
     @Test
-    fun `drag snapping returns null when anchor cell center is far outside the board`() {
-        val cellCenters = List(10) { index -> 100f + index * 34f + 16f }
+    fun `drag snapping clamps to the first origin when overlay start is far before the board`() {
+        val axisStarts = listOf(100f, 134f, 168f, 202f, 236f, 270f, 304f, 338f, 372f, 406f)
 
         assertEquals(
-            null,
+            0,
             resolveDraggedOriginAxis(
-                fingerInRoot = -200f,
-                fingerToAnchorCellCenter = 0f,
-                cellCenters = cellCenters,
-                anchorCellOffset = 0,
+                targetContentStart = -200f,
+                axisStarts = axisStarts,
                 pieceSpanCells = 1,
             )
         )
     }
 
     @Test
-    fun `drag snapping reaches right edge with uneven measured centers`() {
-        val cellCenters = listOf(116f, 150f, 184f, 218f, 252f, 286f, 320f, 354.5f, 389.5f, 425f)
-        val fingerToAnchorCellCenter = 0f
+    fun `drag snapping clamps to the last origin when overlay start is beyond the board`() {
+        val axisStarts = listOf(100f, 134f, 168f, 202f, 236f, 270f, 304f, 338f, 372f, 406f)
 
         assertEquals(
             7,
             resolveDraggedOriginAxis(
-                fingerInRoot = cellCenters[9],
-                fingerToAnchorCellCenter = fingerToAnchorCellCenter,
-                cellCenters = cellCenters,
-                anchorCellOffset = 2,
+                targetContentStart = 900f,
+                axisStarts = axisStarts,
                 pieceSpanCells = 3,
             )
         )
     }
 
     @Test
-    fun `drag snapping reaches bottom edge with uneven measured centers`() {
-        val cellCenters = listOf(216f, 250f, 284f, 318f, 352f, 386f, 420f, 455f, 490f, 526f)
+    fun `drag snapping reaches right edge with uneven measured starts`() {
+        val axisStarts = listOf(100f, 134f, 168f, 202f, 236f, 270f, 304f, 338.5f, 373.5f, 409f)
 
         assertEquals(
             7,
             resolveDraggedOriginAxis(
-                fingerInRoot = cellCenters[9],
-                fingerToAnchorCellCenter = 0f,
-                cellCenters = cellCenters,
-                anchorCellOffset = 2,
+                targetContentStart = axisStarts[7],
+                axisStarts = axisStarts,
                 pieceSpanCells = 3,
             )
         )
+    }
+
+    @Test
+    fun `drag snapping reaches bottom edge with uneven measured starts`() {
+        val axisStarts = listOf(200f, 234f, 268f, 302f, 336f, 370f, 404f, 439f, 474f, 510f)
+
+        assertEquals(
+            7,
+            resolveDraggedOriginAxis(
+                targetContentStart = axisStarts[7],
+                axisStarts = axisStarts,
+                pieceSpanCells = 3,
+            )
+        )
+    }
+
+    @Test
+    fun `drag start offset is clamped to the piece content when drag begins in padding`() {
+        assertEquals(
+            96f,
+            normalizeDragStartOffsetInContent(
+                startOffsetInPiece = 104f,
+                pieceContainerInsetPx = 8f,
+                contentSizePx = 96f,
+            )
+        )
+        assertEquals(
+            0f,
+            normalizeDragStartOffsetInContent(
+                startOffsetInPiece = 3f,
+                pieceContainerInsetPx = 8f,
+                contentSizePx = 96f,
+            )
+        )
+    }
+
+    @Test
+    fun `normalized drag start still resolves the final origin for a horizontal bar`() {
+        val axisStarts = listOf(100f, 134f, 168f, 202f, 236f, 270f, 304f, 338f, 372f, 406f)
+        val normalizedOffset = normalizeDragStartOffsetInContent(
+            startOffsetInPiece = 112f,
+            pieceContainerInsetPx = 8f,
+            contentSizePx = 96f,
+        )
+
+        assertEquals(
+            7,
+            resolveDraggedOriginAxis(
+                targetContentStart = (axisStarts[7] + normalizedOffset) - normalizedOffset,
+                axisStarts = axisStarts,
+                pieceSpanCells = 3,
+            )
+        )
+    }
+
+    @Test
+    fun `normalized drag start still resolves the final origin for a vertical bar`() {
+        val axisStarts = listOf(200f, 234f, 268f, 302f, 336f, 370f, 404f, 438f, 472f, 506f)
+        val normalizedOffset = normalizeDragStartOffsetInContent(
+            startOffsetInPiece = 112f,
+            pieceContainerInsetPx = 8f,
+            contentSizePx = 96f,
+        )
+
+        assertEquals(
+            7,
+            resolveDraggedOriginAxis(
+                targetContentStart = (axisStarts[7] + normalizedOffset) - normalizedOffset,
+                axisStarts = axisStarts,
+                pieceSpanCells = 3,
+            )
+        )
+    }
+
+    @Test
+    fun `all random shapes stay within 3x3 bounds`() {
+        assertTrue(
+            Shapes.All.all { shape ->
+                val maxDx = shape.cells.maxOf { it.dx }
+                val maxDy = shape.cells.maxOf { it.dy }
+                maxDx < 3 && maxDy < 3
+            }
+        )
+    }
+
+    @Test
+    fun `all random shapes are unique`() {
+        val signatures = Shapes.All.map { shape ->
+            shape.cells.joinToString(";") { "${it.dx},${it.dy}" }
+        }
+        assertEquals(signatures.size, signatures.toSet().size)
     }
 }
