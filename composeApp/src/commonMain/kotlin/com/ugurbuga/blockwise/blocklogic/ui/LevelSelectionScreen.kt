@@ -1,25 +1,20 @@
 package com.ugurbuga.blockwise.blocklogic.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.ugurbuga.blockwise.blocklogic.domain.Difficulty
@@ -55,6 +50,17 @@ fun LevelSelectionScreen(
     modifier: Modifier = Modifier,
 ) {
     val rules = selectedDifficulty.toRules()
+    val gridSizeOptions = listOf(8, 10, 12).map { size ->
+        ChipOption(
+            value = GridSize(size),
+            label = stringResource(Res.string.grid_size_option, size),
+        )
+    }
+    val difficultyOptions = listOf(
+        ChipOption(Difficulty.Easy, stringResource(Res.string.difficulty_easy)),
+        ChipOption(Difficulty.Normal, stringResource(Res.string.difficulty_normal)),
+        ChipOption(Difficulty.Hard, stringResource(Res.string.difficulty_hard)),
+    )
 
     Column(
         modifier = modifier
@@ -62,47 +68,62 @@ fun LevelSelectionScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(stringResource(Res.string.level_selection_title), style = MaterialTheme.typography.titleLarge)
+        Text(
+            stringResource(Res.string.level_selection_title),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        SelectionChipGroup(
+            title = stringResource(Res.string.grid_size),
+            selectedValue = selectedSize,
+            options = gridSizeOptions,
+            onSelected = onSizeSelected,
+        )
+
+        SelectionChipGroup(
+            title = stringResource(Res.string.difficulty),
+            selectedValue = selectedDifficulty,
+            options = difficultyOptions,
+            onSelected = onDifficultySelected,
+        )
+
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            tonalElevation = 2.dp,
+            color = MaterialTheme.colorScheme.surface,
         ) {
-            GridSizeMenu(
-                selected = selectedSize,
-                onSelected = onSizeSelected,
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(stringResource(Res.string.rules_rule_1_title), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = if (rules.maxSameColorPerRow == null) {
+                        stringResource(Res.string.rules_rule_1_desc_disabled)
+                    } else {
+                        stringResource(Res.string.rules_rule_1_desc_enabled, rules.maxSameColorPerRow)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
 
-            DifficultyMenu(
-                selected = selectedDifficulty,
-                onSelected = onDifficultySelected,
-            )
-        }
+                Text(stringResource(Res.string.rules_rule_2_title), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = if (rules.maxSameColorPerCol == null) {
+                        stringResource(Res.string.rules_rule_2_desc_disabled)
+                    } else {
+                        stringResource(Res.string.rules_rule_2_desc_enabled, rules.maxSameColorPerCol)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(Res.string.rules_rule_1_title), style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = if (rules.maxSameColorPerRow == null) {
-                    stringResource(Res.string.rules_rule_1_desc_disabled)
-                } else {
-                    stringResource(Res.string.rules_rule_1_desc_enabled, rules.maxSameColorPerRow)
-                },
-                style = MaterialTheme.typography.bodyMedium,
-            )
-
-            Text(stringResource(Res.string.rules_rule_2_title), style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = if (rules.maxSameColorPerCol == null) {
-                    stringResource(Res.string.rules_rule_2_desc_disabled)
-                } else {
-                    stringResource(Res.string.rules_rule_2_desc_enabled, rules.maxSameColorPerCol)
-                },
-                style = MaterialTheme.typography.bodyMedium,
-            )
-
-            Button(onClick = onOpenRules) {
-                Text(stringResource(Res.string.rules))
+                Button(onClick = onOpenRules) {
+                    Text(stringResource(Res.string.rules))
+                }
             }
         }
 
@@ -118,73 +139,56 @@ fun LevelSelectionScreen(
 }
 
 @Composable
-private fun GridSizeMenu(
-    selected: GridSize,
-    onSelected: (GridSize) -> Unit,
+private fun <T> SelectionChipGroup(
+    title: String,
+    selectedValue: T,
+    options: List<ChipOption<T>>,
+    onSelected: (T) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Box {
-        Button(onClick = { expanded = true }) {
-            Text(stringResource(Res.string.grid_size))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(Res.string.grid_size_option, selected.value))
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            listOf(8, 10, 12).forEach { size ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(Res.string.grid_size_option, size)) },
-                    onClick = {
-                        expanded = false
-                        onSelected(GridSize(size))
-                    },
-                )
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        tonalElevation = 3.dp,
+        color = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                options.forEach { option ->
+                    val isSelected = option.value == selectedValue
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { onSelected(option.value) },
+                        label = { Text(option.label) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = isSelected,
+                            borderColor = MaterialTheme.colorScheme.outlineVariant,
+                            selectedBorderColor = MaterialTheme.colorScheme.primary,
+                        ),
+                    )
+                }
             }
         }
     }
 }
 
-@Composable
-private fun DifficultyMenu(
-    selected: Difficulty,
-    onSelected: (Difficulty) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
+private data class ChipOption<T>(
+    val value: T,
+    val label: String,
+)
 
-    Box {
-        Button(onClick = { expanded = true }) {
-            Text(stringResource(Res.string.difficulty))
-            Spacer(Modifier.width(8.dp))
-            Text(
-                when (selected) {
-                    Difficulty.Easy -> stringResource(Res.string.difficulty_easy)
-                    Difficulty.Normal -> stringResource(Res.string.difficulty_normal)
-                    Difficulty.Hard -> stringResource(Res.string.difficulty_hard)
-                }
-            )
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(
-                text = { Text(stringResource(Res.string.difficulty_easy)) },
-                onClick = {
-                    expanded = false
-                    onSelected(Difficulty.Easy)
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(Res.string.difficulty_normal)) },
-                onClick = {
-                    expanded = false
-                    onSelected(Difficulty.Normal)
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(Res.string.difficulty_hard)) },
-                onClick = {
-                    expanded = false
-                    onSelected(Difficulty.Hard)
-                },
-            )
-        }
-    }
-}

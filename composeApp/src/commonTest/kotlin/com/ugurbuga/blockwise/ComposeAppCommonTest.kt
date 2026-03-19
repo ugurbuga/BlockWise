@@ -1,12 +1,20 @@
 package com.ugurbuga.blockwise
 
 import com.ugurbuga.blockwise.blocklogic.domain.Shapes
+import com.ugurbuga.blockwise.blocklogic.ui.buildGridGeometry
+import com.ugurbuga.blockwise.blocklogic.ui.cellExtentPx
 import com.ugurbuga.blockwise.blocklogic.ui.GridAxisGeometry
 import com.ugurbuga.blockwise.blocklogic.ui.normalizeDragStartOffsetInContent
+import com.ugurbuga.blockwise.blocklogic.ui.resolveDragAnchor
 import com.ugurbuga.blockwise.blocklogic.ui.resolveDraggedOriginAxis
+import com.ugurbuga.blockwise.blocklogic.ui.resolveNearestCellAxis
+import com.ugurbuga.blockwise.blocklogic.ui.resolvePointerCellAxis
 import com.ugurbuga.blockwise.blocklogic.ui.resolveSnappedOriginAxis
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.IntSize
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class ComposeAppCommonTest {
@@ -228,5 +236,264 @@ class ComposeAppCommonTest {
             shape.cells.joinToString(";") { "${it.dx},${it.dy}" }
         }
         assertEquals(signatures.size, signatures.toSet().size)
+    }
+
+    @Test
+    fun `cell extent is derived from board size and gap`() {
+        assertEquals(
+            48.2f,
+            cellExtentPx(
+                boardExtentPx = 500f,
+                gridCount = 10,
+                gapPx = 2f,
+            )
+        )
+    }
+
+    @Test
+    fun `grid geometry uses board origin as the first cell start`() {
+        val geometry = assertNotNull(
+            buildGridGeometry(
+                gridTopLeftInRoot = Offset(24f, 96f),
+                gridSizePx = IntSize(500, 500),
+                gridCount = 10,
+                gapPx = 2f,
+            )
+        )
+
+        assertEquals(24f, geometry.x.firstStart)
+        assertEquals(96f, geometry.y.firstStart)
+        assertEquals(50.2f, geometry.x.step)
+        assertEquals(50.2f, geometry.y.step)
+    }
+
+    @Test
+    fun `grid geometry snapping reaches the right edge on 8 10 and 12 boards`() {
+        listOf(8, 10, 12).forEach { gridSize ->
+            val geometry = assertNotNull(
+                buildGridGeometry(
+                    gridTopLeftInRoot = Offset(40f, 120f),
+                    gridSizePx = IntSize(480, 480),
+                    gridCount = gridSize,
+                    gapPx = 2f,
+                )
+            )
+            val maxOrigin = gridSize - 3
+
+            assertEquals(
+                maxOrigin,
+                resolveSnappedOriginAxis(
+                    targetContentStart = geometry.x.firstStart + geometry.x.step * 50f,
+                    axis = geometry.x,
+                    maxOrigin = maxOrigin,
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `grid geometry snapping reaches the bottom edge without producing row 10 on a 10 board`() {
+        val geometry = assertNotNull(
+            buildGridGeometry(
+                gridTopLeftInRoot = Offset(32f, 80f),
+                gridSizePx = IntSize(500, 500),
+                gridCount = 10,
+                gapPx = 2f,
+            )
+        )
+
+        val originY = assertNotNull(
+            resolveSnappedOriginAxis(
+                targetContentStart = geometry.y.firstStart + geometry.y.step * 100f,
+                axis = geometry.y,
+                maxOrigin = 7,
+            )
+        )
+
+        assertEquals(7, originY)
+        assertTrue(listOf(originY, originY + 1, originY + 2).all { it in 0..9 })
+    }
+
+    @Test
+    fun `drag anchor selects the nearest occupied cell for a horizontal bar`() {
+        val anchor = resolveDragAnchor(
+            piece = com.ugurbuga.blockwise.blocklogic.domain.Piece(
+                shape = Shapes.Line3H,
+                color = com.ugurbuga.blockwise.blocklogic.domain.BlockColor.Blue,
+            ),
+            offsetInContent = Offset(118f, 20f),
+            cellWidthPx = 48f,
+            cellHeightPx = 48f,
+            gapPx = 2f,
+        )
+
+        assertEquals(2, anchor.dx)
+        assertEquals(0, anchor.dy)
+    }
+
+    @Test
+    fun `drag anchor selects the nearest occupied cell for a vertical bar`() {
+        val anchor = resolveDragAnchor(
+            piece = com.ugurbuga.blockwise.blocklogic.domain.Piece(
+                shape = Shapes.Line3V,
+                color = com.ugurbuga.blockwise.blocklogic.domain.BlockColor.Red,
+            ),
+            offsetInContent = Offset(20f, 118f),
+            cellWidthPx = 48f,
+            cellHeightPx = 48f,
+            gapPx = 2f,
+        )
+
+        assertEquals(0, anchor.dx)
+        assertEquals(2, anchor.dy)
+    }
+
+    @Test
+    fun `nearest cell snapping does not advance before the next cell center threshold`() {
+        val axis = GridAxisGeometry(firstStart = 32f, step = 50.2f)
+
+        assertEquals(
+            0,
+            resolveNearestCellAxis(
+                pointerPosition = 32f + 47f,
+                axis = axis,
+                cellExtent = 48.2f,
+                maxCellIndex = 9,
+            )
+        )
+        assertEquals(
+            1,
+            resolveNearestCellAxis(
+                pointerPosition = 32f + 51f,
+                axis = axis,
+                cellExtent = 48.2f,
+                maxCellIndex = 9,
+            )
+        )
+    }
+
+    @Test
+    fun `nearest cell snapping reaches the final board cell and clamps beyond it`() {
+        val geometry = assertNotNull(
+            buildGridGeometry(
+                gridTopLeftInRoot = Offset(32f, 80f),
+                gridSizePx = IntSize(500, 500),
+                gridCount = 10,
+                gapPx = 2f,
+            )
+        )
+
+        assertEquals(
+            9,
+            resolveNearestCellAxis(
+                pointerPosition = geometry.x.firstStart + geometry.x.step * 9 + geometry.cellWidth / 2f,
+                axis = geometry.x,
+                cellExtent = geometry.cellWidth,
+                maxCellIndex = 9,
+            )
+        )
+        assertEquals(
+            9,
+            resolveNearestCellAxis(
+                pointerPosition = geometry.x.firstStart + geometry.x.step * 20,
+                axis = geometry.x,
+                cellExtent = geometry.cellWidth,
+                maxCellIndex = 9,
+            )
+        )
+    }
+
+    @Test
+    fun `pointer cell snapping stays on the same cell while pointer is inside that cell area`() {
+        val geometry = assertNotNull(
+            buildGridGeometry(
+                gridTopLeftInRoot = Offset(32f, 80f),
+                gridSizePx = IntSize(500, 500),
+                gridCount = 10,
+                gapPx = 2f,
+            )
+        )
+
+        assertEquals(
+            0,
+            resolvePointerCellAxis(
+                pointerPosition = geometry.x.firstStart + geometry.cellWidth - 1f,
+                axis = geometry.x,
+                cellExtent = geometry.cellWidth,
+                maxCellIndex = 9,
+            )
+        )
+        assertEquals(
+            1,
+            resolvePointerCellAxis(
+                pointerPosition = geometry.x.firstStart + geometry.x.step + 1f,
+                axis = geometry.x,
+                cellExtent = geometry.cellWidth,
+                maxCellIndex = 9,
+            )
+        )
+    }
+
+    @Test
+    fun `pointer cell snapping resolves gap positions to the nearest neighboring cell`() {
+        val geometry = assertNotNull(
+            buildGridGeometry(
+                gridTopLeftInRoot = Offset(32f, 80f),
+                gridSizePx = IntSize(500, 500),
+                gridCount = 10,
+                gapPx = 2f,
+            )
+        )
+        val gapStart = geometry.x.firstStart + geometry.cellWidth
+
+        assertEquals(
+            0,
+            resolvePointerCellAxis(
+                pointerPosition = gapStart + 0.25f,
+                axis = geometry.x,
+                cellExtent = geometry.cellWidth,
+                maxCellIndex = 9,
+            )
+        )
+        assertEquals(
+            1,
+            resolvePointerCellAxis(
+                pointerPosition = gapStart + 1.75f,
+                axis = geometry.x,
+                cellExtent = geometry.cellWidth,
+                maxCellIndex = 9,
+            )
+        )
+    }
+
+    @Test
+    fun `pointer cell snapping reaches and clamps to the final board cell`() {
+        val geometry = assertNotNull(
+            buildGridGeometry(
+                gridTopLeftInRoot = Offset(32f, 80f),
+                gridSizePx = IntSize(500, 500),
+                gridCount = 10,
+                gapPx = 2f,
+            )
+        )
+
+        assertEquals(
+            9,
+            resolvePointerCellAxis(
+                pointerPosition = geometry.x.firstStart + geometry.x.step * 9 + geometry.cellWidth - 1f,
+                axis = geometry.x,
+                cellExtent = geometry.cellWidth,
+                maxCellIndex = 9,
+            )
+        )
+        assertEquals(
+            9,
+            resolvePointerCellAxis(
+                pointerPosition = geometry.x.firstStart + geometry.x.step * 20f,
+                axis = geometry.x,
+                cellExtent = geometry.cellWidth,
+                maxCellIndex = 9,
+            )
+        )
     }
 }

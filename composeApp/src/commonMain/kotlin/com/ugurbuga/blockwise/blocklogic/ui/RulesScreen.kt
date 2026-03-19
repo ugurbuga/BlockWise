@@ -6,27 +6,27 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import com.ugurbuga.blockwise.blocklogic.domain.BlockColor
 import com.ugurbuga.blockwise.blocklogic.domain.Difficulty
 import com.ugurbuga.blockwise.blocklogic.domain.Piece
 import com.ugurbuga.blockwise.blocklogic.domain.Shapes
 import com.ugurbuga.blockwise.blocklogic.domain.toRules
+import com.ugurbuga.blockwise.ui.theme.toPaletteColor
 import org.jetbrains.compose.resources.stringResource
 
 import blockwise.composeapp.generated.resources.Res
@@ -60,7 +60,11 @@ fun RulesScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(stringResource(Res.string.rules_title), style = MaterialTheme.typography.titleLarge)
+            Text(
+                stringResource(Res.string.rules_title),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
             Button(onClick = onBack) {
                 Text(stringResource(Res.string.back))
             }
@@ -114,22 +118,32 @@ private fun RuleSection(
     description: String,
     content: (@Composable () -> Unit)?,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium)
-        Text(description, style = MaterialTheme.typography.bodyMedium)
-        if (content != null) {
-            content()
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        tonalElevation = 3.dp,
+        color = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(
+                description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (content != null) {
+                content()
+            }
         }
     }
 }
 
 @Composable
 private fun PieceSample(piece: Piece) {
-    Box(
-        modifier = Modifier
-            .border(1.dp, MaterialTheme.colorScheme.outline)
-            .padding(8.dp),
-    ) {
+    Box(modifier = Modifier.padding(4.dp)) {
         PiecePreviewSmall(piece)
     }
 }
@@ -149,20 +163,13 @@ private fun PiecePreviewSmall(piece: Piece) {
                     Box(
                         modifier = Modifier
                             .size(14.dp)
-                            .background(if (filled) piece.color.toComposeColor() else Color.Transparent)
-                            .border(1.dp, MaterialTheme.colorScheme.outline),
+                            .background(
+                                if (filled) piece.color.toPaletteColor() else MaterialTheme.colorScheme.surface
+                            )
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     )
                 }
             }
         }
-    }
-}
-
-private fun BlockColor.toComposeColor(): Color {
-    return when (this) {
-        BlockColor.Red -> Color(0xFFE57373)
-        BlockColor.Green -> Color(0xFF81C784)
-        BlockColor.Blue -> Color(0xFF64B5F6)
-        BlockColor.Yellow -> Color(0xFFFFF176)
     }
 }

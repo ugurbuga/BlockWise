@@ -58,16 +58,20 @@ class BlockLogicViewModel(
         placePieceAt(pieceIndex = selectedIndex, x = x, y = y, source = "tap")
     }
 
-    fun onPieceDropped(pieceIndex: Int, x: Int, y: Int) {
-        placePieceAt(pieceIndex = pieceIndex, x = x, y = y, source = "drag")
+    fun onPieceDropped(pieceId: Long, x: Int, y: Int) {
+        placePieceAt(pieceId = pieceId, x = x, y = y, source = "drag")
     }
 
-    private fun placePieceAt(pieceIndex: Int?, x: Int, y: Int, source: String) {
+    private fun placePieceAt(pieceIndex: Int? = null, pieceId: Long? = null, x: Int, y: Int, source: String) {
         val state = _uiState.value
         if (state.isGameOver || state.isAnimatingClear) return
 
         val rules = state.difficulty.toRules()
-        val resolvedIndex = pieceIndex ?: run {
+        val resolvedIndex = when {
+            pieceId != null -> state.pieces.indexOfFirst { it.id == pieceId }.takeIf { it >= 0 }
+            pieceIndex != null -> pieceIndex
+            else -> null
+        } ?: run {
             println("BW_DROP source=$source target=($x,$y) failure=NoPieceSelected")
             _viewEvent.tryEmit(BlockLogicViewEvent.PlacementFailed(PlacementFailure.NoPieceSelected))
             return
@@ -75,7 +79,7 @@ class BlockLogicViewModel(
         val piece = state.pieces.getOrNull(resolvedIndex) ?: return
 
         println(
-            "BW_DROP source=$source target=($x,$y) pieceIndex=$resolvedIndex cells=${piece.absoluteCellsAt(x, y)}"
+            "BW_DROP source=$source target=($x,$y) pieceIndex=$resolvedIndex pieceId=${piece.id} cells=${piece.absoluteCellsAt(x, y)}"
         )
 
         val failure = GameEngine.validatePlacement(state.grid, piece, x, y, rules)
@@ -101,7 +105,7 @@ class BlockLogicViewModel(
         }
 
         println(
-            "BW_DROP source=$source placedOrigin=($x,$y) placedCells=${piece.absoluteCellsAt(x, y)} " +
+            "BW_DROP source=$source placedOrigin=($x,$y) pieceId=${piece.id} placedCells=${piece.absoluteCellsAt(x, y)} " +
                 "clearedRows=${result.clearedRows} clearedCols=${result.clearedCols}"
         )
 

@@ -1,6 +1,9 @@
 package com.ugurbuga.blockwise.blocklogic.domain
 
+import kotlin.random.Random
+
 data class Piece(
+    val id: Long = Random.nextLong(),
     val shape: Shape,
     val color: BlockColor,
 )
