@@ -11,10 +11,24 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        AndroidAppContextHolder.appContext = applicationContext
+        AndroidAppContextHolder.currentActivity = this
 
         setContent {
             App()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AndroidAppContextHolder.currentActivity = this
+    }
+
+    override fun onDestroy() {
+        if (AndroidAppContextHolder.currentActivity === this) {
+            AndroidAppContextHolder.currentActivity = null
+        }
+        super.onDestroy()
     }
 }
 

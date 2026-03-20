@@ -8,7 +8,7 @@ import com.ugurbuga.blockwise.blocklogic.domain.GameEngine
 import com.ugurbuga.blockwise.blocklogic.domain.GridSize
 import com.ugurbuga.blockwise.blocklogic.domain.Piece
 import com.ugurbuga.blockwise.blocklogic.domain.PlacementFailure
-import com.ugurbuga.blockwise.blocklogic.domain.toRules
+import com.ugurbuga.blockwise.blocklogic.domain.resolveGameConfig
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -46,9 +46,9 @@ class BlockLogicViewModel(
     fun onPieceSelected(index: Int) {
         val state = _uiState.value
         if (state.isAnimatingClear) return
-        val rules = state.difficulty.toRules()
+        val config = resolveGameConfig(state.gridSize, state.difficulty)
         val piece = state.pieces.getOrNull(index)
-        val validOrigins = if (piece != null) GameEngine.findValidOrigins(state.grid, piece, rules) else emptySet()
+        val validOrigins = if (piece != null) GameEngine.findValidOrigins(state.grid, piece, config.rules) else emptySet()
         val validCells = if (piece != null) toValidCells(validOrigins, piece) else emptySet()
         _uiState.value = state.copy(selectedPieceIndex = index, validOrigins = validOrigins, validCells = validCells)
     }
@@ -66,7 +66,13 @@ class BlockLogicViewModel(
         val state = _uiState.value
         if (state.isGameOver || state.isAnimatingClear) return
 
-        val rules = state.difficulty.toRules()
+        val config = resolveGameConfig(state.gridSize, state.difficulty)
+        val rules = config.rules
+        if (state.movesRemaining == 0) {
+            _viewEvent.tryEmit(BlockLogicViewEvent.GameOver)
+            _uiState.value = state.copy(isGameOver = true)
+            return
+        }
         val resolvedIndex = when {
             pieceId != null -> state.pieces.indexOfFirst { it.id == pieceId }.takeIf { it >= 0 }
             pieceIndex != null -> pieceIndex
@@ -111,13 +117,14 @@ class BlockLogicViewModel(
 
         val clearedScore = (result.clearedRows + result.clearedCols) * 10
         val newScore = state.score + 1 + clearedScore
+        val remainingMoves = state.movesRemaining?.minus(1)?.coerceAtLeast(0)
 
         val newPieces = state.pieces.toMutableList().also { it.removeAt(resolvedIndex) }
         if (newPieces.size < 3) {
-            while (newPieces.size < 3) newPieces += GameEngine.randomPiece()
+            while (newPieces.size < 3) newPieces += GameEngine.randomPiece(availableShapes = config.availableShapes)
         }
 
-        val isGameOver = !GameEngine.hasAnyValidMove(result.grid, newPieces, rules)
+        val isGameOver = (remainingMoves == 0) || !GameEngine.hasAnyValidMove(result.grid, newPieces, rules)
         val hasClearAnimation = result.clearedRowIndices.isNotEmpty() || result.clearedColIndices.isNotEmpty()
 
         if (!hasClearAnimation) {
@@ -128,6 +135,7 @@ class BlockLogicViewModel(
             _uiState.value = state.copy(
                 grid = result.grid,
                 score = newScore,
+                movesRemaining = remainingMoves,
                 pieces = newPieces,
                 selectedPieceIndex = null,
                 validOrigins = emptySet(),
@@ -143,6 +151,7 @@ class BlockLogicViewModel(
         _uiState.value = state.copy(
             grid = result.placedGrid,
             score = newScore,
+            movesRemaining = remainingMoves,
             pieces = newPieces,
             selectedPieceIndex = null,
             validOrigins = emptySet(),
@@ -169,15 +178,18 @@ class BlockLogicViewModel(
     }
 
     private fun newState(size: GridSize, difficulty: Difficulty): BlockLogicUiState {
-        val grid = GameEngine.newGrid(size)
-        val pieces = List(3) { GameEngine.randomPiece() }
-        val rules = difficulty.toRules()
+        val config = resolveGameConfig(size, difficulty)
+        val opening = GameEngine.buildPlayableOpening(config)
+        val grid = opening.grid
+        val pieces = opening.pieces
+        val rules = config.rules
         val isGameOver = !GameEngine.hasAnyValidMove(grid, pieces, rules)
         return BlockLogicUiState(
             gridSize = size,
             difficulty = difficulty,
             grid = grid,
             score = 0,
+            movesRemaining = config.difficultyConfig.moveLimit,
             pieces = pieces,
             selectedPieceIndex = null,
             validOrigins = emptySet(),

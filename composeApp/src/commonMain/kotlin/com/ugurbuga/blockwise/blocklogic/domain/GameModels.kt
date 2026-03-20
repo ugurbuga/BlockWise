@@ -13,6 +13,8 @@ data class CellCoord(
 
 data class Cell(
     val color: BlockColor,
+    val isLocked: Boolean = false,
+    val isPrefilled: Boolean = false,
 )
 
 data class Grid(
@@ -55,5 +57,29 @@ sealed interface RuleViolation {
         val col: Int,
         val color: BlockColor,
         val limit: Int,
+    ) : RuleViolation
+
+    data class TooManyAdjacentSameColorInRow(
+        val row: Int,
+        val color: BlockColor,
+        val limit: Int,
+    ) : RuleViolation
+
+    data class TooManyAdjacentSameColorInCol(
+        val col: Int,
+        val color: BlockColor,
+        val limit: Int,
+    ) : RuleViolation
+
+    data class NotEnoughDistinctColorsInRow(
+        val row: Int,
+        val distinctCount: Int,
+        val required: Int,
+    ) : RuleViolation
+
+    data class NotEnoughDistinctColorsInCol(
+        val col: Int,
+        val distinctCount: Int,
+        val required: Int,
     ) : RuleViolation
 }

@@ -23,15 +23,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
@@ -53,14 +51,16 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ugurbuga.blockwise.LocalAppLanguage
+import com.ugurbuga.blockwise.localizedGetString
 import com.ugurbuga.blockwise.blocklogic.domain.BlockColor
+import com.ugurbuga.blockwise.blocklogic.domain.CellCoord
 import com.ugurbuga.blockwise.blocklogic.domain.CellOffset
 import com.ugurbuga.blockwise.blocklogic.domain.GameEngine
 import com.ugurbuga.blockwise.blocklogic.domain.Difficulty
@@ -69,25 +69,24 @@ import com.ugurbuga.blockwise.blocklogic.domain.PlacementFailure
 import com.ugurbuga.blockwise.blocklogic.domain.RuleViolation
 import com.ugurbuga.blockwise.blocklogic.domain.Piece
 import com.ugurbuga.blockwise.blocklogic.domain.Shapes
+import com.ugurbuga.blockwise.blocklogic.domain.resolveGameConfig
+import com.ugurbuga.blockwise.localizedStringResource as stringResource
 import com.ugurbuga.blockwise.ui.theme.BlockWiseTheme
 import com.ugurbuga.blockwise.ui.theme.toPaletteColor
-import org.jetbrains.compose.resources.getString
-import org.jetbrains.compose.resources.stringResource
 import blockwise.composeapp.generated.resources.Res
-import blockwise.composeapp.generated.resources.difficulty
-import blockwise.composeapp.generated.resources.difficulty_easy
-import blockwise.composeapp.generated.resources.difficulty_hard
-import blockwise.composeapp.generated.resources.difficulty_normal
 import blockwise.composeapp.generated.resources.game_over
-import blockwise.composeapp.generated.resources.game_over_no_moves
-import blockwise.composeapp.generated.resources.grid_size
-import blockwise.composeapp.generated.resources.grid_size_option
+import blockwise.composeapp.generated.resources.game_over_message
 import blockwise.composeapp.generated.resources.invalid_placement
+import blockwise.composeapp.generated.resources.invalid_placement_adjacent_col
+import blockwise.composeapp.generated.resources.invalid_placement_adjacent_row
+import blockwise.composeapp.generated.resources.invalid_placement_distinct_col
+import blockwise.composeapp.generated.resources.invalid_placement_distinct_row
 import blockwise.composeapp.generated.resources.invalid_placement_out_of_bounds
 import blockwise.composeapp.generated.resources.invalid_placement_overlap
 import blockwise.composeapp.generated.resources.menu
-import blockwise.composeapp.generated.resources.no_moves_left
+import blockwise.composeapp.generated.resources.moves_remaining
 import blockwise.composeapp.generated.resources.new_game
+import blockwise.composeapp.generated.resources.ok
 import blockwise.composeapp.generated.resources.rule_color_limit
 import blockwise.composeapp.generated.resources.rule_color_limit_col
 import blockwise.composeapp.generated.resources.score
@@ -232,6 +231,27 @@ internal fun resolvePointerCellAxis(
     return if (distanceToCurrentCell <= distanceToNextCell) clampedIndex else nextIndex
 }
 
+internal fun resolveAttemptedPointerCellAxis(
+    pointerPosition: Float,
+    axis: GridAxisGeometry,
+    cellExtent: Float,
+): Int? {
+    if (axis.step <= 0f || cellExtent <= 0f) return null
+
+    val relative = pointerPosition - axis.firstStart
+    val rawIndex = floor(relative / axis.step).toInt()
+    val offsetInStride = relative - rawIndex * axis.step
+    val gapExtent = (axis.step - cellExtent).coerceAtLeast(0f)
+
+    if (offsetInStride <= cellExtent || gapExtent == 0f) {
+        return rawIndex
+    }
+
+    val distanceToCurrentCell = offsetInStride - cellExtent
+    val distanceToNextCell = axis.step - offsetInStride
+    return if (distanceToCurrentCell <= distanceToNextCell) rawIndex else rawIndex + 1
+}
+
 internal fun resolveDraggedOriginAxis(
     targetContentStart: Float,
     axisStarts: List<Float>,
@@ -268,17 +288,65 @@ internal fun resolveDragAnchor(
     } ?: piece.shape.cells.first()
 }
 
+internal fun resolveValidDragOrigin(
+    piece: Piece,
+    hoveredCell: CellCoord,
+    anchor: CellOffset,
+    gridCount: Int,
+    isFingerInsideBoard: Boolean,
+    validOrigins: Set<CellCoord>,
+): CellCoord? {
+    if (!isFingerInsideBoard) return null
+
+    val span = piece.spanInCells()
+    val maxOriginX = (gridCount - span.widthCells).coerceAtLeast(0)
+    val maxOriginY = (gridCount - span.heightCells).coerceAtLeast(0)
+    val origin = CellCoord(
+        x = (hoveredCell.x - anchor.dx).coerceIn(0, maxOriginX),
+        y = (hoveredCell.y - anchor.dy).coerceIn(0, maxOriginY),
+    )
+    return origin.takeIf { it in validOrigins }
+}
+
+internal fun resolveAttemptedDragOrigin(
+    hoveredCell: CellCoord,
+    anchor: CellOffset,
+): CellCoord {
+    return CellCoord(
+        x = hoveredCell.x - anchor.dx,
+        y = hoveredCell.y - anchor.dy,
+    )
+}
+
+internal fun previewCellsForPlacement(piece: Piece, origin: CellCoord?): Set<CellCoord> {
+    if (origin == null) return emptySet()
+    return piece.shape.cells
+        .mapTo(linkedSetOf()) { offset ->
+            CellCoord(
+                x = origin.x + offset.dx,
+                y = origin.y + offset.dy,
+            )
+        }
+}
+
+internal fun previewCellsForOrigins(piece: Piece, origins: Set<CellCoord>): Set<CellCoord> {
+    if (origins.isEmpty()) return emptySet()
+    return origins.flatMapTo(linkedSetOf()) { origin ->
+        piece.shape.cells.map { offset ->
+            CellCoord(
+                x = origin.x + offset.dx,
+                y = origin.y + offset.dy,
+            )
+        }
+    }
+}
+
 private fun Piece.boardCellsAt(originX: Int, originY: Int): List<Pair<Int, Int>> {
     return shape.cells
         .map { (originX + it.dx) to (originY + it.dy) }
         .sortedWith(compareBy<Pair<Int, Int>> { it.second }.thenBy { it.first })
 }
 
-private fun Piece.boardCoordLabelsAt(originX: Int, originY: Int): Map<Pair<Int, Int>, String> {
-    return shape.cells.associate { cell ->
-        (cell.dx to cell.dy) to "${originX + cell.dx},${originY + cell.dy}"
-    }
-}
 
 private fun Offset.debugString(): String = "(${x.roundToInt()},${y.roundToInt()})"
 
@@ -370,6 +438,7 @@ fun BlockLogicScreen(
     initialDifficulty: Difficulty,
     sessionKey: String,
     onMenu: () -> Unit,
+    onRecordScore: (GridSize, Difficulty, Int) -> Unit,
 ) {
     val vm: BlockLogicViewModel = viewModel(key = sessionKey) {
         BlockLogicViewModel(
@@ -378,36 +447,47 @@ fun BlockLogicScreen(
         )
     }
     val state by vm.uiState.collectAsState()
+    val appLanguage = LocalAppLanguage.current
 
     val snackbarHostState = remember { SnackbarHostState() }
+    var hasRecordedGameOverScore by remember(sessionKey) { mutableStateOf(false) }
 
-    LaunchedEffect(vm) {
+    fun recordCurrentScore() {
+        onRecordScore(state.gridSize, state.difficulty, state.score)
+    }
+
+    LaunchedEffect(vm, appLanguage) {
         vm.viewEvent.collect { event ->
             when (event) {
                 is BlockLogicViewEvent.PlacementFailed -> {
                     val msg = when (val failure = event.failure) {
-                        PlacementFailure.NoPieceSelected -> getString(Res.string.invalid_placement)
-                        PlacementFailure.OutOfBounds -> getString(Res.string.invalid_placement_out_of_bounds)
-                        PlacementFailure.Overlap -> getString(Res.string.invalid_placement_overlap)
+                        PlacementFailure.NoPieceSelected -> localizedGetString(appLanguage, Res.string.invalid_placement)
+                        PlacementFailure.OutOfBounds -> localizedGetString(appLanguage, Res.string.invalid_placement_out_of_bounds)
+                        PlacementFailure.Overlap -> localizedGetString(appLanguage, Res.string.invalid_placement_overlap)
                         is PlacementFailure.Rule -> {
                             when (val v = failure.violation) {
-                                is RuleViolation.TooManySameColorInRow -> getString(Res.string.rule_color_limit, v.limit)
-                                is RuleViolation.TooManySameColorInCol -> getString(Res.string.rule_color_limit_col, v.limit)
+                                is RuleViolation.TooManySameColorInRow -> localizedGetString(appLanguage, Res.string.rule_color_limit, v.limit)
+                                is RuleViolation.TooManySameColorInCol -> localizedGetString(appLanguage, Res.string.rule_color_limit_col, v.limit)
+                                is RuleViolation.TooManyAdjacentSameColorInRow -> localizedGetString(appLanguage, Res.string.invalid_placement_adjacent_row, v.limit)
+                                is RuleViolation.TooManyAdjacentSameColorInCol -> localizedGetString(appLanguage, Res.string.invalid_placement_adjacent_col, v.limit)
+                                is RuleViolation.NotEnoughDistinctColorsInRow -> localizedGetString(appLanguage, Res.string.invalid_placement_distinct_row, v.required)
+                                is RuleViolation.NotEnoughDistinctColorsInCol -> localizedGetString(appLanguage, Res.string.invalid_placement_distinct_col, v.required)
                             }
                         }
                     }
                     snackbarHostState.showSnackbar(msg)
                 }
-                BlockLogicViewEvent.GameOver -> {
-                    snackbarHostState.showSnackbar(
-                        getString(
-                            Res.string.game_over_no_moves,
-                            getString(Res.string.game_over),
-                            getString(Res.string.no_moves_left),
-                        )
-                    )
-                }
+                BlockLogicViewEvent.GameOver -> Unit
             }
+        }
+    }
+
+    LaunchedEffect(state.isGameOver, state.score, state.gridSize, state.difficulty) {
+        if (!state.isGameOver) {
+            hasRecordedGameOverScore = false
+        } else if (!hasRecordedGameOverScore) {
+            hasRecordedGameOverScore = true
+            recordCurrentScore()
         }
     }
 
@@ -415,8 +495,14 @@ fun BlockLogicScreen(
         modifier = modifier,
         state = state,
         snackbarHostState = snackbarHostState,
-        onNewGame = vm::onNewGame,
-        onMenu = onMenu,
+        onNewGame = {
+            recordCurrentScore()
+            vm.onNewGame()
+        },
+        onMenu = {
+            recordCurrentScore()
+            onMenu()
+        },
         onCellTapped = vm::onCellTapped,
         onPieceDropped = vm::onPieceDropped,
         onPieceSelected = vm::onPieceSelected,
@@ -449,6 +535,8 @@ fun BlockLogicContent(
     var dragStartOffsetInContent by remember { mutableStateOf<Offset?>(null) }
     var dragAnchor by remember { mutableStateOf<DragAnchor?>(null) }
     var dragSnappedPlacement by remember { mutableStateOf<DragPlacement?>(null) }
+    var dragValidOrigins by remember { mutableStateOf<Set<CellCoord>>(emptySet()) }
+    var dragValidCells by remember { mutableStateOf<Set<CellCoord>>(emptySet()) }
     var dragLogSessionId by remember { mutableStateOf<Int?>(null) }
     var dragLogSequence by remember { mutableStateOf(0) }
 
@@ -457,6 +545,29 @@ fun BlockLogicContent(
     val pieceContainerPaddingDp = 0.dp
     val pieceContainerInsetPx = with(density) { pieceContainerPaddingDp.toPx() }
     val gridGapPx = with(density) { gridGapDp.toPx() }
+    val rules = remember(state.gridSize, state.difficulty) {
+        resolveGameConfig(state.gridSize, state.difficulty).rules
+    }
+    val dragPreviewCells = remember(
+        draggingPieceSnapshot?.id,
+        dragSnappedPlacement,
+    ) {
+        val piece = draggingPieceSnapshot
+        val placement = dragSnappedPlacement
+        if (piece == null || placement == null) {
+            emptySet()
+        } else {
+            previewCellsForPlacement(
+                piece = piece,
+                origin = CellCoord(placement.originX, placement.originY),
+            )
+        }
+    }
+    val highlightedCells = when {
+        draggingPieceId != null && dragPreviewCells.isNotEmpty() -> dragPreviewCells
+        draggingPieceId != null -> dragValidCells
+        else -> state.validCells
+    }
 
     fun formatPlacement(piece: Piece, placement: DragPlacement?): String {
         return if (placement == null) {
@@ -503,6 +614,8 @@ fun BlockLogicContent(
         dragStartOffsetInContent = null
         dragAnchor = null
         dragSnappedPlacement = null
+        dragValidOrigins = emptySet()
+        dragValidCells = emptySet()
         dragLogSessionId = null
     }
 
@@ -569,8 +682,8 @@ fun BlockLogicContent(
 
     fun computeDragResolution(piece: Piece, fingerInRoot: Offset): DragResolution? {
         val geometry = measuredGridGeometry() ?: return null
-        val span = piece.spanInCells()
         val anchor = dragAnchor ?: return null
+        val validOrigins = if (draggingPieceId != null) dragValidOrigins else state.validOrigins
         val hoveredX = resolvePointerCellAxis(
             pointerPosition = fingerInRoot.x,
             axis = geometry.x,
@@ -583,21 +696,49 @@ fun BlockLogicContent(
             cellExtent = geometry.cellHeight,
             maxCellIndex = gridCount - 1,
         ) ?: return null
-        val originX = (hoveredX - anchor.dx).coerceIn(0, gridCount - span.widthCells)
-        val originY = (hoveredY - anchor.dy).coerceIn(0, gridCount - span.heightCells)
         val isInsideBoard = isFingerInsideBoard(fingerInRoot, geometry)
+        val hoveredCell = CellCoord(x = hoveredX, y = hoveredY)
+        val origin = resolveValidDragOrigin(
+            piece = piece,
+            hoveredCell = hoveredCell,
+            anchor = CellOffset(dx = anchor.dx, dy = anchor.dy),
+            gridCount = gridCount,
+            isFingerInsideBoard = isInsideBoard,
+            validOrigins = validOrigins,
+        )
 
         return DragResolution(
-            placement = if (isInsideBoard) {
+            placement = origin?.let {
                 DragPlacement(
-                    originX = originX,
-                    originY = originY,
+                    originX = it.x,
+                    originY = it.y,
                 )
-            } else {
-                null
             },
-            hoveredCell = HoveredBoardCell(x = hoveredX, y = hoveredY),
+            hoveredCell = HoveredBoardCell(x = hoveredCell.x, y = hoveredCell.y),
             isFingerInsideBoard = isInsideBoard,
+        )
+    }
+
+    fun computeDragAttempt(piece: Piece, fingerInRoot: Offset): DragPlacement? {
+        val geometry = measuredGridGeometry() ?: return null
+        val anchor = dragAnchor ?: return null
+        val hoveredX = resolveAttemptedPointerCellAxis(
+            pointerPosition = fingerInRoot.x,
+            axis = geometry.x,
+            cellExtent = geometry.cellWidth,
+        ) ?: return null
+        val hoveredY = resolveAttemptedPointerCellAxis(
+            pointerPosition = fingerInRoot.y,
+            axis = geometry.y,
+            cellExtent = geometry.cellHeight,
+        ) ?: return null
+        val attemptedOrigin = resolveAttemptedDragOrigin(
+            hoveredCell = CellCoord(x = hoveredX, y = hoveredY),
+            anchor = CellOffset(dx = anchor.dx, dy = anchor.dy),
+        )
+        return DragPlacement(
+            originX = attemptedOrigin.x,
+            originY = attemptedOrigin.y,
         )
     }
 
@@ -628,10 +769,19 @@ fun BlockLogicContent(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = stringResource(Res.string.score, state.score),
-                style = MaterialTheme.typography.titleMedium,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource(Res.string.score, state.score),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                state.movesRemaining?.let { movesRemaining ->
+                    Text(
+                        text = stringResource(Res.string.moves_remaining, movesRemaining),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Button(onClick = onMenu) {
@@ -646,21 +796,9 @@ fun BlockLogicContent(
 
         SnackbarHost(hostState = snackbarHostState)
 
-        if (state.isGameOver) {
-            AssistChip(
-                onClick = {},
-                enabled = false,
-                label = { Text(stringResource(Res.string.game_over)) },
-                colors = AssistChipDefaults.assistChipColors(
-                    disabledContainerColor = MaterialTheme.colorScheme.errorContainer,
-                    disabledLabelColor = MaterialTheme.colorScheme.onErrorContainer,
-                ),
-            )
-        }
-
             GridView(
                 grid = state.grid,
-                validCells = state.validCells,
+                highlightedCells = highlightedCells,
                 clearingRows = state.clearingRows,
                 clearingCols = state.clearingCols,
                 onCellTapped = onCellTapped,
@@ -711,6 +849,9 @@ fun BlockLogicContent(
                         dragLogSessionId = dragLogSequence
                         draggingPieceId = piece.id
                         draggingPieceSnapshot = piece
+                        val validOrigins = GameEngine.findValidOrigins(state.grid, piece, rules)
+                        dragValidOrigins = validOrigins
+                        dragValidCells = previewCellsForOrigins(piece, validOrigins)
                         draggingOffsetPx = Offset.Zero
                         val startFinger = coords.localToRoot(startOffsetPx)
                         dragStartFingerInRoot = startFinger
@@ -838,7 +979,13 @@ fun BlockLogicContent(
                     val finger = dragStartFingerInRoot?.plus(draggingOffsetPx)
                     val geometry = measuredGridGeometry()
                     val resolution = if (piece != null && finger != null) computeDragResolution(piece, finger) else null
-                    dragSnappedPlacement?.let { placement ->
+                    val attemptedPlacement = if (piece != null && finger != null) computeDragAttempt(piece, finger) else null
+                    val placement = when {
+                        resolution?.placement != null -> resolution.placement
+                        attemptedPlacement != null -> null
+                        else -> dragSnappedPlacement
+                    }
+                    placement?.let { resolvedPlacement ->
                         logDrag(
                             buildDragLogMessage(
                                 phase = "end-drop",
@@ -855,13 +1002,38 @@ fun BlockLogicContent(
                                 freeOverlayTopLeftInRoot = if (finger != null && pieceId != null) {
                                     pieceLayoutInfos[pieceId]?.let { info -> freeOverlayTopLeftInRoot(finger, info) }
                                 } else null,
-                                snappedOverlayTopLeftInRoot = snappedOverlayTopLeftInRoot(placement),
+                                snappedOverlayTopLeftInRoot = snappedOverlayTopLeftInRoot(resolvedPlacement),
                                 overlayMode = "drop-snapped",
-                                extra = piece?.let { formatPlacement(it, placement) }
+                                extra = piece?.let { formatPlacement(it, resolvedPlacement) }
                             )
                         )
                         if (pieceId != null) {
-                            onPieceDropped(pieceId, placement.originX, placement.originY)
+                            onPieceDropped(pieceId, resolvedPlacement.originX, resolvedPlacement.originY)
+                        }
+                    } ?: attemptedPlacement?.let { attempted ->
+                        logDrag(
+                            buildDragLogMessage(
+                                phase = "end-invalid-drop",
+                                sessionId = dragLogSessionId,
+                                pieceIndex = state.pieces.indexOfFirst { it.id == pieceId }.takeIf { it >= 0 },
+                                piece = piece,
+                                fingerInRoot = finger,
+                                dragOffsetPx = draggingOffsetPx,
+                                startOffsetInPiece = dragStartOffsetInPiece,
+                                startOffsetInContent = dragStartOffsetInContent,
+                                anchor = dragAnchor,
+                                geometry = geometry,
+                                resolution = resolution,
+                                freeOverlayTopLeftInRoot = if (finger != null && pieceId != null) {
+                                    pieceLayoutInfos[pieceId]?.let { info -> freeOverlayTopLeftInRoot(finger, info) }
+                                } else null,
+                                snappedOverlayTopLeftInRoot = null,
+                                overlayMode = if (resolution?.isFingerInsideBoard == true) "invalid-inside-board" else "invalid-outside-board",
+                                extra = piece?.let { formatPlacement(it, attempted) }
+                            )
+                        )
+                        if (pieceId != null) {
+                            onPieceDropped(pieceId, attempted.originX, attempted.originY)
                         }
                     } ?: run {
                         logDrag(
@@ -939,12 +1111,12 @@ fun BlockLogicContent(
                 val snappedOverlayTopLeftLocal = placement
                     ?.let(::snappedOverlayTopLeftInRoot)
                     ?.minus(contentTopLeftInRoot)
+                val isInvalidInsideBoard = resolution?.isFingerInsideBoard == true && placement == null
                 val displayTopLeftLocal = if (resolution?.isFingerInsideBoard == true) {
                     snappedOverlayTopLeftLocal ?: freeOverlayTopLeftLocal
                 } else {
                     freeOverlayTopLeftLocal
                 }
-                val dragCellLabels = placement?.let { piece.boardCoordLabelsAt(it.originX, it.originY) }.orEmpty()
 
                 Box(
                     modifier = Modifier
@@ -959,38 +1131,32 @@ fun BlockLogicContent(
                     PiecePreview(
                         piece = piece,
                         cellSize = gridCellSizeDp,
-                        cellLabels = dragCellLabels,
-                        borderColor = MaterialTheme.colorScheme.primary,
+                        borderColor = if (isInvalidInsideBoard) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
                     )
                 }
             }
         }
-    }
-}
 
-@Composable
-private fun GridSizeMenu(
-    selected: GridSize,
-    onSelected: (GridSize) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Box {
-        Button(onClick = { expanded = true }) {
-            Text(stringResource(Res.string.grid_size))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(Res.string.grid_size_option, selected.value))
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            listOf(8, 10, 12).forEach { size ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(Res.string.grid_size_option, size)) },
-                    onClick = {
-                        expanded = false
-                        onSelected(GridSize(size))
-                    },
-                )
-            }
+        if (state.isGameOver) {
+            AlertDialog(
+                onDismissRequest = onMenu,
+                title = { Text(stringResource(Res.string.game_over)) },
+                text = { Text(stringResource(Res.string.game_over_message)) },
+                confirmButton = {
+                    Button(onClick = onNewGame) {
+                        Text(stringResource(Res.string.new_game))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = onMenu) {
+                        Text(stringResource(Res.string.ok))
+                    }
+                },
+            )
         }
     }
 }
@@ -998,7 +1164,7 @@ private fun GridSizeMenu(
 @Composable
 private fun GridView(
     grid: com.ugurbuga.blockwise.blocklogic.domain.Grid,
-    validCells: Set<com.ugurbuga.blockwise.blocklogic.domain.CellCoord>,
+    highlightedCells: Set<CellCoord>,
     clearingRows: Set<Int>,
     clearingCols: Set<Int>,
     onCellTapped: (x: Int, y: Int) -> Unit,
@@ -1016,8 +1182,10 @@ private fun GridView(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 for (x in 0 until size) {
                     val cell = grid[x, y]
-                    val isValidCell = validCells.any { it.x == x && it.y == y }
+                    val isHighlightedCell = CellCoord(x, y) in highlightedCells
                     val isClearingCell = y in clearingRows || x in clearingCols
+                    val isLockedCell = cell?.isLocked == true
+                    val isPrefilledCell = cell?.isPrefilled == true
                     val clearProgress by animateFloatAsState(
                         targetValue = if (isClearingCell) 0f else 1f,
                         animationSpec = tween(durationMillis = 220),
@@ -1031,74 +1199,30 @@ private fun GridView(
                                 scaleX = 0.85f + 0.15f * clearProgress
                                 scaleY = 0.85f + 0.15f * clearProgress
                             }
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            .border(
+                                width = if (isLockedCell) 2.dp else 1.dp,
+                                color = when {
+                                    isLockedCell -> MaterialTheme.colorScheme.primary
+                                    isPrefilledCell -> MaterialTheme.colorScheme.secondary
+                                    else -> MaterialTheme.colorScheme.outlineVariant
+                                }
+                            )
                             .background(
                                 when {
                                     cell != null -> cell.color.toPaletteColor()
-                                    isValidCell -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f)
+                                    isHighlightedCell -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f)
                                     else -> MaterialTheme.colorScheme.surface
                                 }
                             )
                             .clickable { onCellTapped(x, y) },
                         contentAlignment = Alignment.Center,
-                    )
-                    {
-                        Text(
-                            text = "$x,$y",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        )
-                    }
+                    ) {}
                 }
             }
         }
     }
 }
 
-@Composable
-private fun DifficultyMenu(
-    selected: Difficulty,
-    onSelected: (Difficulty) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Box {
-        Button(onClick = { expanded = true }) {
-            Text(stringResource(Res.string.difficulty))
-            Spacer(Modifier.width(8.dp))
-            Text(
-                when (selected) {
-                    Difficulty.Easy -> stringResource(Res.string.difficulty_easy)
-                    Difficulty.Normal -> stringResource(Res.string.difficulty_normal)
-                    Difficulty.Hard -> stringResource(Res.string.difficulty_hard)
-                }
-            )
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(
-                text = { Text(stringResource(Res.string.difficulty_easy)) },
-                onClick = {
-                    expanded = false
-                    onSelected(Difficulty.Easy)
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(Res.string.difficulty_normal)) },
-                onClick = {
-                    expanded = false
-                    onSelected(Difficulty.Normal)
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(Res.string.difficulty_hard)) },
-                onClick = {
-                    expanded = false
-                    onSelected(Difficulty.Hard)
-                },
-            )
-        }
-    }
-}
 
 @Composable
 private fun PiecesRow(
@@ -1112,8 +1236,8 @@ private fun PiecesRow(
     onDrag: (deltaPx: Offset) -> Unit,
     onDragEnd: () -> Unit,
     onDragCancel: () -> Unit,
-    cellSize: androidx.compose.ui.unit.Dp,
-    containerPadding: androidx.compose.ui.unit.Dp,
+    cellSize: Dp,
+    containerPadding: Dp,
 ) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         itemsIndexed(
@@ -1191,7 +1315,6 @@ private fun PiecesRow(
 private fun PiecePreview(
     piece: Piece,
     cellSize: Dp,
-    cellLabels: Map<Pair<Int, Int>, String> = emptyMap(),
     borderColor: Color = MaterialTheme.colorScheme.outlineVariant,
 ) {
     val maxDx = piece.shape.cells.maxOf { it.dx }
@@ -1209,7 +1332,6 @@ private fun PiecePreview(
             .height(totalHeight)
     ) {
         piece.shape.cells.forEach { cell ->
-            val label = cellLabels[cell.dx to cell.dy]
             Box(
                 modifier = Modifier
                     .offset(
@@ -1219,16 +1341,7 @@ private fun PiecePreview(
                     .size(cellSize)
                     .border(1.dp, borderColor)
                     .background(piece.color.toPaletteColor()),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (label != null) {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                    )
-                }
-            }
+            ) {}
         }
     }
 }
@@ -1250,6 +1363,7 @@ private fun BlockLogicContentPreview() {
                 difficulty = Difficulty.Normal,
                 grid = grid,
                 score = 42,
+                movesRemaining = null,
                 pieces = pieces,
                 selectedPieceIndex = 1,
                 validOrigins = emptySet(),

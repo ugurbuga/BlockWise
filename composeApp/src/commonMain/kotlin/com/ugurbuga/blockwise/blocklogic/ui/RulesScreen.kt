@@ -17,20 +17,26 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.ugurbuga.blockwise.localizedStringResource as stringResource
 import com.ugurbuga.blockwise.blocklogic.domain.BlockColor
 import com.ugurbuga.blockwise.blocklogic.domain.Difficulty
+import com.ugurbuga.blockwise.blocklogic.domain.GridSize
 import com.ugurbuga.blockwise.blocklogic.domain.Piece
+import com.ugurbuga.blockwise.blocklogic.domain.resolveGameConfig
 import com.ugurbuga.blockwise.blocklogic.domain.Shapes
-import com.ugurbuga.blockwise.blocklogic.domain.toRules
+import com.ugurbuga.blockwise.ui.theme.BlockWiseTheme
 import com.ugurbuga.blockwise.ui.theme.toPaletteColor
-import org.jetbrains.compose.resources.stringResource
 
 import blockwise.composeapp.generated.resources.Res
 import blockwise.composeapp.generated.resources.back
+import blockwise.composeapp.generated.resources.grid_size_option
 import blockwise.composeapp.generated.resources.rules_intro
 import blockwise.composeapp.generated.resources.rules_rule_1_desc_disabled
 import blockwise.composeapp.generated.resources.rules_rule_1_desc_enabled
@@ -38,17 +44,48 @@ import blockwise.composeapp.generated.resources.rules_rule_1_title
 import blockwise.composeapp.generated.resources.rules_rule_2_desc_disabled
 import blockwise.composeapp.generated.resources.rules_rule_2_desc_enabled
 import blockwise.composeapp.generated.resources.rules_rule_2_title
+import blockwise.composeapp.generated.resources.rules_current_mode
+import blockwise.composeapp.generated.resources.rules_piece_pool_desc
+import blockwise.composeapp.generated.resources.rules_piece_pool_title
+import blockwise.composeapp.generated.resources.rules_adjacent_limit_title
+import blockwise.composeapp.generated.resources.rules_adjacent_limit_desc_disabled
+import blockwise.composeapp.generated.resources.rules_adjacent_limit_desc_enabled
+import blockwise.composeapp.generated.resources.rules_variety_title
+import blockwise.composeapp.generated.resources.rules_variety_desc_disabled
+import blockwise.composeapp.generated.resources.rules_variety_desc_enabled
+import blockwise.composeapp.generated.resources.rules_move_limit_title
+import blockwise.composeapp.generated.resources.rules_move_limit_desc_disabled
+import blockwise.composeapp.generated.resources.rules_move_limit_desc_enabled
+import blockwise.composeapp.generated.resources.rules_prefilled_title
+import blockwise.composeapp.generated.resources.rules_prefilled_desc
 import blockwise.composeapp.generated.resources.rules_tips_desc
 import blockwise.composeapp.generated.resources.rules_tips_title
 import blockwise.composeapp.generated.resources.rules_title
+import blockwise.composeapp.generated.resources.difficulty_easy
+import blockwise.composeapp.generated.resources.difficulty_normal
+import blockwise.composeapp.generated.resources.difficulty_hard
+import blockwise.composeapp.generated.resources.difficulty_very_hard
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
 fun RulesScreen(
+    gridSize: GridSize,
     difficulty: Difficulty,
     onBack: () -> Unit,
+    initialScroll: Int = 0,
+    onScrollChanged: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val rules = difficulty.toRules()
+    val config = resolveGameConfig(gridSize, difficulty)
+    val scrollState = rememberScrollState(initial = initialScroll)
+
+    LaunchedEffect(scrollState) {
+        snapshotFlow { scrollState.value }
+            .distinctUntilChanged()
+            .collectLatest(onScrollChanged)
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -73,18 +110,30 @@ fun RulesScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(stringResource(Res.string.rules_intro), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = stringResource(
+                    Res.string.rules_current_mode,
+                    stringResource(Res.string.grid_size_option, gridSize.value),
+                    when (difficulty) {
+                        Difficulty.Easy -> stringResource(Res.string.difficulty_easy)
+                        Difficulty.Normal -> stringResource(Res.string.difficulty_normal)
+                        Difficulty.Hard -> stringResource(Res.string.difficulty_hard)
+                        Difficulty.VeryHard -> stringResource(Res.string.difficulty_very_hard)
+                    }
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             RuleSection(
                 title = stringResource(Res.string.rules_rule_1_title),
-                description = if (rules.maxSameColorPerRow == null) {
-                    stringResource(Res.string.rules_rule_1_desc_disabled)
-                } else {
-                    stringResource(Res.string.rules_rule_1_desc_enabled, rules.maxSameColorPerRow)
-                },
+                description = config.rules.maxSameColorPerRow?.let {
+                    stringResource(Res.string.rules_rule_1_desc_enabled, it)
+                } ?: stringResource(Res.string.rules_rule_1_desc_disabled),
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     PieceSample(Piece(shape = Shapes.Square2, color = BlockColor.Red))
@@ -95,11 +144,49 @@ fun RulesScreen(
 
             RuleSection(
                 title = stringResource(Res.string.rules_rule_2_title),
-                description = if (rules.maxSameColorPerCol == null) {
-                    stringResource(Res.string.rules_rule_2_desc_disabled)
-                } else {
-                    stringResource(Res.string.rules_rule_2_desc_enabled, rules.maxSameColorPerCol)
-                },
+                description = config.rules.maxSameColorPerCol?.let {
+                    stringResource(Res.string.rules_rule_2_desc_enabled, it)
+                } ?: stringResource(Res.string.rules_rule_2_desc_disabled),
+                content = null,
+            )
+
+            RuleSection(
+                title = stringResource(Res.string.rules_piece_pool_title),
+                description = stringResource(Res.string.rules_piece_pool_desc, config.maxShapeDimension),
+                content = null,
+            )
+
+            RuleSection(
+                title = stringResource(Res.string.rules_adjacent_limit_title),
+                description = config.rules.maxAdjacentSameColor?.let {
+                    stringResource(Res.string.rules_adjacent_limit_desc_enabled, it)
+                } ?: stringResource(Res.string.rules_adjacent_limit_desc_disabled),
+                content = null,
+            )
+
+            RuleSection(
+                title = stringResource(Res.string.rules_variety_title),
+                description = config.rules.minDistinctColorsInFullLine?.let {
+                    stringResource(Res.string.rules_variety_desc_enabled, it)
+                } ?: stringResource(Res.string.rules_variety_desc_disabled),
+                content = null,
+            )
+
+            RuleSection(
+                title = stringResource(Res.string.rules_move_limit_title),
+                description = config.rules.moveLimit?.let {
+                    stringResource(Res.string.rules_move_limit_desc_enabled, it)
+                } ?: stringResource(Res.string.rules_move_limit_desc_disabled),
+                content = null,
+            )
+
+            RuleSection(
+                title = stringResource(Res.string.rules_prefilled_title),
+                description = stringResource(
+                    Res.string.rules_prefilled_desc,
+                    (config.difficultyConfig.preFilledRatio * 100).toInt(),
+                    (config.difficultyConfig.lockedCellsRatio * 100).toInt(),
+                ),
                 content = null,
             )
 
@@ -173,3 +260,16 @@ private fun PiecePreviewSmall(piece: Piece) {
         }
     }
 }
+
+@Preview(showBackground = true)
+@Composable
+private fun RulesScreenPreview() {
+    BlockWiseTheme {
+        RulesScreen(
+            gridSize = GridSize(12),
+            difficulty = Difficulty.Hard,
+            onBack = {},
+        )
+    }
+}
+

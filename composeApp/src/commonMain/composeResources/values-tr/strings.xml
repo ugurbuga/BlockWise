@@ -3,24 +3,39 @@
     <string name="score">Skor: %1$d</string>
     <string name="grid_size">Izgara Boyutu</string>
     <string name="grid_size_option">%1$dx%1$d</string>
+    <string name="language">Dil</string>
+    <string name="language_english">İngilizce</string>
+    <string name="language_turkish">Türkçe</string>
+    <string name="language_spanish">İspanyolca</string>
+    <string name="language_french">Fransızca</string>
+    <string name="language_german">Almanca</string>
+    <string name="language_russian">Rusça</string>
+    <string name="language_arabic">Arapça</string>
 
     <string name="difficulty">Zorluk</string>
     <string name="difficulty_easy">Kolay</string>
     <string name="difficulty_normal">Normal</string>
     <string name="difficulty_hard">Zor</string>
+    <string name="difficulty_very_hard">Uzman</string>
 
     <string name="rules">Kurallar</string>
+    <string name="scores">Puanlar</string>
     <string name="back">Geri</string>
     <string name="menu">Menü</string>
     <string name="play">Oyna</string>
     <string name="level_selection_title">Seviye Seçimi</string>
 
     <string name="new_game">Yeni Oyun</string>
+    <string name="moves_remaining">Kalan hamle: %1$d</string>
     <string name="select_piece">Parça seç</string>
 
     <string name="invalid_placement">Geçersiz yerleştirme</string>
     <string name="invalid_placement_out_of_bounds">Izgaranın dışına taşıyor.</string>
     <string name="invalid_placement_overlap">Mevcut bloklarla çakışıyor.</string>
+    <string name="invalid_placement_adjacent_row">Bir satırda aynı renkten yan yana en fazla %1$d blok olabilir.</string>
+    <string name="invalid_placement_adjacent_col">Bir sütunda aynı renkten yan yana en fazla %1$d blok olabilir.</string>
+    <string name="invalid_placement_distinct_row">Dolu bir satırda en az %1$d farklı renk olmalı.</string>
+    <string name="invalid_placement_distinct_col">Dolu bir sütunda en az %1$d farklı renk olmalı.</string>
 
     <string name="rule_color_limit">Bir satırda aynı renkten %1$d adetten fazla blok olamaz.</string>
     <string name="rule_color_limit_col">Bir sütunda aynı renkten %1$d adetten fazla blok olamaz.</string>
@@ -28,15 +43,35 @@
     <string name="game_over">Oyun Bitti</string>
     <string name="no_moves_left">Kalan parçalar için geçerli hamle yok.</string>
     <string name="game_over_no_moves">%1$s: %2$s</string>
+    <string name="game_over_message">Bu oyun için geçerli bir hamle kalmadı.</string>
+    <string name="ok">Tamam</string>
 
     <string name="rules_title">Blok Mantık Kuralları</string>
     <string name="rules_intro">Parçaları ızgaraya yerleştir. Satır veya sütunları doldurarak temizle.</string>
-    <string name="rules_rule_1_title">Renk limiti</string>
-    <string name="rules_rule_1_desc_disabled">Kolay: satır renk limiti yok.</string>
-    <string name="rules_rule_1_desc_enabled">Bir satırda aynı renkten %1$d adetten fazla blok olamaz.</string>
-    <string name="rules_rule_2_title">Sütun limiti</string>
-    <string name="rules_rule_2_desc_disabled">Kolay: sütun renk limiti yok.</string>
-    <string name="rules_rule_2_desc_enabled">Bir sütunda aynı renkten %1$d adetten fazla blok olamaz.</string>
+    <string name="rules_rule_1_title">Satır renk limiti</string>
+    <string name="rules_rule_1_desc_disabled">Kolay modda satır renk limiti yok.</string>
+    <string name="rules_rule_1_desc_enabled">Her satırda aynı renkten en fazla %1$d blok olabilir.</string>
+    <string name="rules_rule_2_title">Sütun renk limiti</string>
+    <string name="rules_rule_2_desc_disabled">Kolay modda sütun renk limiti yok.</string>
+    <string name="rules_rule_2_desc_enabled">Her sütunda aynı renkten en fazla %1$d blok olabilir.</string>
+    <string name="rules_piece_pool_title">Parça boyutu havuzu</string>
+    <string name="rules_piece_pool_desc">Bu modda en fazla %1$dx%1$d boyutunda parçalar gelir.</string>
+    <string name="rules_adjacent_limit_title">Bitişik renk limiti</string>
+    <string name="rules_adjacent_limit_desc_disabled">Bu modda bitişik renk limiti yok.</string>
+    <string name="rules_adjacent_limit_desc_enabled">Satır ve sütunlarda aynı renkten yan yana en fazla %1$d blok olabilir.</string>
+    <string name="rules_variety_title">Renk çeşitliliği</string>
+    <string name="rules_variety_desc_disabled">Bu modda minimum renk çeşitliliği kuralı yok.</string>
+    <string name="rules_variety_desc_enabled">Dolu satır ve sütunlarda en az %1$d farklı renk bulunmalı.</string>
+    <string name="rules_move_limit_title">Hamle baskısı</string>
+    <string name="rules_move_limit_desc_disabled">Bu modda hamle limiti yok.</string>
+    <string name="rules_move_limit_desc_enabled">Oyunu bitirmek için %1$d hamlen var.</string>
+    <string name="rules_prefilled_title">Tahta durumu</string>
+    <string name="rules_prefilled_desc">Tahta başlangıçta %1$d%% dolu hücre ve %2$d%% kilitli hücre içerir.</string>
     <string name="rules_tips_title">İpuçları</string>
     <string name="rules_tips_desc">Kalan parçalardan hiçbiri hiçbir yere yerleştirilemiyorsa oyun biter.</string>
+    <string name="rules_current_mode">Geçerli mod: %1$s • %2$s</string>
+    <string name="scores_title">Puanlar</string>
+    <string name="scores_best_for_mode">En iyi skor</string>
+    <string name="scores_empty">-</string>
+    <string name="selected_mode_best_score">Bu mod için en iyi skor: %1$d</string>
 </resources>

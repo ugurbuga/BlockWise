@@ -1,10 +1,26 @@
 package com.ugurbuga.blockwise
 
+import com.ugurbuga.blockwise.blocklogic.domain.BlockColor
+import com.ugurbuga.blockwise.blocklogic.domain.Cell
+import com.ugurbuga.blockwise.blocklogic.domain.CellCoord
+import com.ugurbuga.blockwise.blocklogic.domain.CellOffset
+import com.ugurbuga.blockwise.blocklogic.domain.Difficulty
+import com.ugurbuga.blockwise.blocklogic.domain.GameEngine
+import com.ugurbuga.blockwise.blocklogic.domain.Grid
+import com.ugurbuga.blockwise.blocklogic.domain.GridSize
+import com.ugurbuga.blockwise.blocklogic.domain.Piece
 import com.ugurbuga.blockwise.blocklogic.domain.Shapes
+import com.ugurbuga.blockwise.blocklogic.domain.resolveGameConfig
+import com.ugurbuga.blockwise.blocklogic.domain.supportedDifficulties
+import com.ugurbuga.blockwise.blocklogic.ui.formatBestScore
 import com.ugurbuga.blockwise.blocklogic.ui.buildGridGeometry
 import com.ugurbuga.blockwise.blocklogic.ui.cellExtentPx
 import com.ugurbuga.blockwise.blocklogic.ui.GridAxisGeometry
 import com.ugurbuga.blockwise.blocklogic.ui.normalizeDragStartOffsetInContent
+import com.ugurbuga.blockwise.blocklogic.ui.previewCellsForOrigins
+import com.ugurbuga.blockwise.blocklogic.ui.resolveAttemptedDragOrigin
+import com.ugurbuga.blockwise.blocklogic.ui.resolveAttemptedPointerCellAxis
+import com.ugurbuga.blockwise.blocklogic.ui.resolveValidDragOrigin
 import com.ugurbuga.blockwise.blocklogic.ui.resolveDragAnchor
 import com.ugurbuga.blockwise.blocklogic.ui.resolveDraggedOriginAxis
 import com.ugurbuga.blockwise.blocklogic.ui.resolveNearestCellAxis
@@ -12,6 +28,7 @@ import com.ugurbuga.blockwise.blocklogic.ui.resolvePointerCellAxis
 import com.ugurbuga.blockwise.blocklogic.ui.resolveSnappedOriginAxis
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.IntSize
+import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -220,12 +237,12 @@ class ComposeAppCommonTest {
     }
 
     @Test
-    fun `all random shapes stay within 3x3 bounds`() {
+    fun `all random shapes stay within 4x4 bounds`() {
         assertTrue(
             Shapes.All.all { shape ->
                 val maxDx = shape.cells.maxOf { it.dx }
                 val maxDy = shape.cells.maxOf { it.dy }
-                maxDx < 3 && maxDy < 3
+                maxDx < 4 && maxDy < 4
             }
         )
     }
@@ -493,6 +510,407 @@ class ComposeAppCommonTest {
                 axis = geometry.x,
                 cellExtent = geometry.cellWidth,
                 maxCellIndex = 9,
+            )
+        )
+    }
+
+    @Test
+    fun `attempted pointer cell axis can resolve outside the board bounds`() {
+        val geometry = assertNotNull(
+            buildGridGeometry(
+                gridTopLeftInRoot = Offset(32f, 80f),
+                gridSizePx = IntSize(500, 500),
+                gridCount = 10,
+                gapPx = 2f,
+            )
+        )
+
+        assertEquals(
+            -1,
+            resolveAttemptedPointerCellAxis(
+                pointerPosition = geometry.x.firstStart - 1f,
+                axis = geometry.x,
+                cellExtent = geometry.cellWidth,
+            )
+        )
+        assertEquals(
+            10,
+            resolveAttemptedPointerCellAxis(
+                pointerPosition = geometry.x.firstStart + geometry.x.step * 10f + 1f,
+                axis = geometry.x,
+                cellExtent = geometry.cellWidth,
+            )
+        )
+    }
+
+    @Test
+    fun `attempted drag origin keeps out of bounds coordinates for validation feedback`() {
+        assertEquals(
+            CellCoord(-1, 5),
+            resolveAttemptedDragOrigin(
+                hoveredCell = CellCoord(0, 6),
+                anchor = CellOffset(1, 1),
+            )
+        )
+    }
+
+    @Test
+    fun `row color limit reports a row violation with asymmetric limits`() {
+        val grid = Grid(
+            size = GridSize(4),
+            cells = listOf(
+                listOf(Cell(BlockColor.Red), Cell(BlockColor.Red), null, null),
+                listOf(null, null, null, null),
+                listOf(null, null, null, null),
+                listOf(null, null, null, null),
+            )
+        )
+
+        val failure = GameEngine.validatePlacement(
+            grid = grid,
+            piece = Piece(shape = Shapes.Single, color = BlockColor.Red),
+            originX = 2,
+            originY = 0,
+            rules = com.ugurbuga.blockwise.blocklogic.domain.GameRules(
+                maxSameColorPerRow = 2,
+                maxSameColorPerCol = 4,
+            ),
+        )
+
+        assertEquals(
+            com.ugurbuga.blockwise.blocklogic.domain.PlacementFailure.Rule(
+                com.ugurbuga.blockwise.blocklogic.domain.RuleViolation.TooManySameColorInRow(
+                    row = 0,
+                    color = BlockColor.Red,
+                    limit = 2,
+                )
+            ),
+            failure,
+        )
+    }
+
+    @Test
+    fun `column color limit reports a column violation with asymmetric limits`() {
+        val grid = Grid(
+            size = GridSize(4),
+            cells = listOf(
+                listOf(Cell(BlockColor.Blue), null, null, null),
+                listOf(Cell(BlockColor.Blue), null, null, null),
+                listOf(null, null, null, null),
+                listOf(null, null, null, null),
+            )
+        )
+
+        val failure = GameEngine.validatePlacement(
+            grid = grid,
+            piece = Piece(shape = Shapes.Single, color = BlockColor.Blue),
+            originX = 0,
+            originY = 2,
+            rules = com.ugurbuga.blockwise.blocklogic.domain.GameRules(
+                maxSameColorPerRow = 4,
+                maxSameColorPerCol = 2,
+            ),
+        )
+
+        assertEquals(
+            com.ugurbuga.blockwise.blocklogic.domain.PlacementFailure.Rule(
+                com.ugurbuga.blockwise.blocklogic.domain.RuleViolation.TooManySameColorInCol(
+                    col = 0,
+                    color = BlockColor.Blue,
+                    limit = 2,
+                )
+            ),
+            failure,
+        )
+    }
+
+    @Test
+    fun `easy mode stays open and simple`() {
+        val config = resolveGameConfig(GridSize(14), Difficulty.Easy)
+
+        assertEquals(null, config.rules.maxSameColorPerRow)
+        assertEquals(null, config.rules.maxSameColorPerCol)
+        assertEquals(0.08f, config.difficultyConfig.preFilledRatio)
+        assertEquals(2, config.maxShapeDimension)
+    }
+
+    @Test
+    fun `normal mode uses relaxed mid game limits`() {
+        val config = resolveGameConfig(GridSize(12), Difficulty.Normal)
+
+        assertEquals(7, config.rules.maxSameColorPerRow)
+        assertEquals(7, config.rules.maxSameColorPerCol)
+        assertEquals(4, config.rules.maxAdjacentSameColor)
+        assertEquals(null, config.rules.minDistinctColorsInFullLine)
+        assertEquals(null, config.rules.moveLimit)
+        assertEquals(0.12f, config.difficultyConfig.preFilledRatio)
+        assertEquals(3, config.maxShapeDimension)
+    }
+
+    @Test
+    fun `hard and expert use softer layered constraints`() {
+        val hard = resolveGameConfig(GridSize(10), Difficulty.Hard)
+        val veryHard = resolveGameConfig(GridSize(14), Difficulty.VeryHard)
+
+        assertEquals(6, hard.rules.maxSameColorPerRow)
+        assertEquals(6, hard.rules.maxSameColorPerCol)
+        assertEquals(3, hard.rules.maxAdjacentSameColor)
+        assertEquals(3, hard.rules.minDistinctColorsInFullLine)
+        assertEquals(36, hard.rules.moveLimit)
+        assertEquals(0.14f, hard.difficultyConfig.preFilledRatio)
+
+        assertEquals(7, veryHard.rules.maxSameColorPerRow)
+        assertEquals(7, veryHard.rules.maxSameColorPerCol)
+        assertEquals(4, veryHard.rules.maxAdjacentSameColor)
+        assertEquals(4, veryHard.rules.minDistinctColorsInFullLine)
+        assertEquals(32, veryHard.rules.moveLimit)
+        assertEquals(0.15f, veryHard.difficultyConfig.preFilledRatio)
+        assertEquals(0.02f, veryHard.difficultyConfig.lockedCellsRatio)
+        assertEquals(4, veryHard.maxShapeDimension)
+    }
+
+    @Test
+    fun `adjacent same color limits are never smaller than max piece size`() {
+        supportedDifficulties().forEach { difficulty ->
+            val config = resolveGameConfig(GridSize(14), difficulty)
+            config.rules.maxAdjacentSameColor?.let { adjacentLimit ->
+                assertTrue(adjacentLimit >= config.maxShapeDimension)
+            }
+        }
+    }
+
+    @Test
+    fun `hard and expert start states always include at least one playable opening move`() {
+        listOf(
+            GridSize(10) to Difficulty.Hard,
+            GridSize(14) to Difficulty.VeryHard,
+        ).forEachIndexed { index, (size, difficulty) ->
+            val config = resolveGameConfig(size, difficulty)
+            val opening = GameEngine.buildPlayableOpening(
+                config = config,
+                random = Random(index + 7),
+            )
+
+            assertEquals(3, opening.pieces.size)
+            assertTrue(GameEngine.hasAnyValidMove(opening.grid, opening.pieces, config.rules))
+        }
+    }
+
+    @Test
+    fun `shape pools respect the configured complexity and maximum dimension`() {
+        val easyShapes = resolveGameConfig(GridSize(8), Difficulty.Easy).availableShapes
+        val normalShapes = resolveGameConfig(GridSize(10), Difficulty.Normal).availableShapes
+        val veryHardShapes = resolveGameConfig(GridSize(14), Difficulty.VeryHard).availableShapes
+
+        assertTrue(easyShapes.all { shape ->
+            val width = shape.cells.maxOf { it.dx } + 1
+            val height = shape.cells.maxOf { it.dy } + 1
+            width <= 2 && height <= 2
+        })
+        assertTrue(normalShapes.any { shape ->
+            val width = shape.cells.maxOf { it.dx } + 1
+            val height = shape.cells.maxOf { it.dy } + 1
+            width == 3 || height == 3
+        })
+        assertTrue(normalShapes.none { shape ->
+            val width = shape.cells.maxOf { it.dx } + 1
+            val height = shape.cells.maxOf { it.dy } + 1
+            width == 4 || height == 4
+        })
+        assertTrue(veryHardShapes.any { shape ->
+            val width = shape.cells.maxOf { it.dx } + 1
+            val height = shape.cells.maxOf { it.dy } + 1
+            width == 4 || height == 4
+        })
+    }
+
+    @Test
+    fun `missing scores are rendered with a dash placeholder`() {
+        assertEquals("-", formatBestScore(null, "-"))
+        assertEquals("42", formatBestScore(42, "-"))
+    }
+
+    @Test
+    fun `best score save helper only accepts better scores`() {
+        assertTrue(BestScoreStore.shouldSaveBest(previousBest = null, score = 8))
+        assertTrue(BestScoreStore.shouldSaveBest(previousBest = 12, score = 13))
+        assertEquals(false, BestScoreStore.shouldSaveBest(previousBest = 12, score = 12))
+        assertEquals(false, BestScoreStore.shouldSaveBest(previousBest = 12, score = 4))
+    }
+
+    @Test
+    fun `navigation helpers maintain a back stack and pop to the previous screen`() {
+        val rootStack = resetToRoot()
+
+        assertEquals(listOf(AppScreen.LevelSelection), rootStack)
+        assertEquals(
+            listOf(AppScreen.LevelSelection, AppScreen.Rules),
+            pushScreen(rootStack, AppScreen.Rules)
+        )
+        assertEquals(
+            listOf(AppScreen.LevelSelection, AppScreen.Game),
+            pushScreen(rootStack, AppScreen.Game)
+        )
+        assertEquals(
+            listOf(AppScreen.LevelSelection),
+            popScreen(listOf(AppScreen.LevelSelection, AppScreen.Scores))
+        )
+        assertEquals(
+            listOf(AppScreen.LevelSelection),
+            popScreen(rootStack)
+        )
+    }
+
+    @Test
+    fun `scroll state keys are stable per screen and mode`() {
+        assertEquals(
+            AppScreen.LevelSelection.name,
+            scrollStateKey(AppScreen.LevelSelection, GridSize(10), Difficulty.Normal)
+        )
+        assertEquals(
+            AppScreen.Scores.name,
+            scrollStateKey(AppScreen.Scores, GridSize(8), Difficulty.Easy)
+        )
+        assertEquals(
+            "Rules:10:Normal",
+            scrollStateKey(AppScreen.Rules, GridSize(10), Difficulty.Normal)
+        )
+        assertEquals(
+            "Rules:12:Hard",
+            scrollStateKey(AppScreen.Rules, GridSize(12), Difficulty.Hard)
+        )
+    }
+
+    @Test
+    fun `app language storage mapping supports all shipped languages`() {
+        assertEquals(null, AppLanguage.fromStorageValue(null))
+        assertEquals(null, AppLanguage.fromStorageValue("unknown"))
+        assertEquals(AppLanguage.English, AppLanguage.fromStorageValue("en"))
+        assertEquals(AppLanguage.Turkish, AppLanguage.fromStorageValue("tr") )
+        assertEquals(AppLanguage.Spanish, AppLanguage.fromStorageValue("es"))
+        assertEquals(AppLanguage.French, AppLanguage.fromStorageValue("fr"))
+        assertEquals(AppLanguage.German, AppLanguage.fromStorageValue("de"))
+        assertEquals(AppLanguage.Russian, AppLanguage.fromStorageValue("ru"))
+        assertEquals(AppLanguage.Arabic, AppLanguage.fromStorageValue("ar"))
+    }
+
+    @Test
+    fun `device language resolution falls back to english when unsupported`() {
+        assertEquals(AppLanguage.Turkish, AppLanguage.fromLanguageTag("tr-TR"))
+        assertEquals(AppLanguage.Spanish, AppLanguage.fromLanguageTag("es_MX"))
+        assertEquals(AppLanguage.English, AppLanguage.fromLanguageTag("it-IT"))
+        assertEquals(AppLanguage.English, AppLanguage.fromLanguageTag(null))
+        assertEquals(AppLanguage.English, AppLanguage.fromLanguageTag(""))
+    }
+
+    @Test
+    fun `language picker labels stay in each language endonym`() {
+        assertEquals("English", AppLanguage.English.endonym)
+        assertEquals("Türkçe", AppLanguage.Turkish.endonym)
+        assertEquals("Español", AppLanguage.Spanish.endonym)
+        assertEquals("Français", AppLanguage.French.endonym)
+        assertEquals("Deutsch", AppLanguage.German.endonym)
+        assertEquals("Русский", AppLanguage.Russian.endonym)
+        assertEquals("العربية", AppLanguage.Arabic.endonym)
+    }
+
+    @Test
+    fun `language picker abbreviations stay compact and stable`() {
+        assertEquals("EN", AppLanguage.English.abbreviation)
+        assertEquals("TR", AppLanguage.Turkish.abbreviation)
+        assertEquals("ES", AppLanguage.Spanish.abbreviation)
+        assertEquals("FR", AppLanguage.French.abbreviation)
+        assertEquals("DE", AppLanguage.German.abbreviation)
+        assertEquals("РУ", AppLanguage.Russian.abbreviation)
+        assertEquals("عر", AppLanguage.Arabic.abbreviation)
+    }
+
+    @Test
+    fun `arabic is the only shipped rtl language`() {
+        assertEquals(false, AppLanguage.English.isRtl)
+        assertEquals(false, AppLanguage.Turkish.isRtl)
+        assertEquals(false, AppLanguage.Spanish.isRtl)
+        assertEquals(false, AppLanguage.French.isRtl)
+        assertEquals(false, AppLanguage.German.isRtl)
+        assertEquals(false, AppLanguage.Russian.isRtl)
+        assertEquals(true, AppLanguage.Arabic.isRtl)
+    }
+
+    @Test
+    fun `drag preview only snaps to origins that satisfy the full rule set`() {
+        val grid = Grid(
+            size = GridSize(4),
+            cells = listOf(
+                listOf(Cell(BlockColor.Red), Cell(BlockColor.Red), Cell(BlockColor.Blue), null),
+                listOf(null, null, null, null),
+                listOf(null, null, null, null),
+                listOf(null, null, null, null),
+            )
+        )
+        val rules = resolveGameConfig(GridSize(4), Difficulty.Hard).rules.copy(
+            maxSameColorPerRow = 2,
+            maxSameColorPerCol = null,
+            maxAdjacentSameColor = null,
+            minDistinctColorsInFullLine = null,
+            moveLimit = null,
+        )
+        val piece = Piece(shape = Shapes.Single, color = BlockColor.Red)
+        val validOrigins = GameEngine.findValidOrigins(grid, piece, rules)
+
+        assertEquals(
+            null,
+            resolveValidDragOrigin(
+                piece = piece,
+                hoveredCell = CellCoord(3, 0),
+                anchor = CellOffset(0, 0),
+                gridCount = 4,
+                isFingerInsideBoard = true,
+                validOrigins = validOrigins,
+            )
+        )
+        assertEquals(
+            CellCoord(3, 1),
+            resolveValidDragOrigin(
+                piece = piece,
+                hoveredCell = CellCoord(3, 1),
+                anchor = CellOffset(0, 0),
+                gridCount = 4,
+                isFingerInsideBoard = true,
+                validOrigins = validOrigins,
+            )
+        )
+        assertEquals(
+            null,
+            resolveValidDragOrigin(
+                piece = piece,
+                hoveredCell = CellCoord(3, 1),
+                anchor = CellOffset(0, 0),
+                gridCount = 4,
+                isFingerInsideBoard = false,
+                validOrigins = validOrigins,
+            )
+        )
+    }
+
+    @Test
+    fun `drag highlight cells expand from every valid origin for the dragged piece`() {
+        val piece = Piece(shape = Shapes.Line3H, color = BlockColor.Blue)
+
+        assertEquals(
+            setOf(
+                CellCoord(0, 0),
+                CellCoord(1, 0),
+                CellCoord(2, 0),
+                CellCoord(2, 2),
+                CellCoord(3, 2),
+                CellCoord(4, 2),
+            ),
+            previewCellsForOrigins(
+                piece = piece,
+                origins = setOf(
+                    CellCoord(0, 0),
+                    CellCoord(2, 2),
+                ),
             )
         )
     }

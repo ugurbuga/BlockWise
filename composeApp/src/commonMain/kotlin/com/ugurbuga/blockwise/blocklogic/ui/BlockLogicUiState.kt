@@ -11,6 +11,7 @@ data class BlockLogicUiState(
     val difficulty: Difficulty,
     val grid: Grid,
     val score: Int,
+    val movesRemaining: Int?,
     val pieces: List<Piece>,
     val selectedPieceIndex: Int?,
     val validOrigins: Set<CellCoord>,
