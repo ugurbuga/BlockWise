@@ -12,12 +12,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,6 +28,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -56,6 +59,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ugurbuga.blockwise.LocalAppLanguage
 import com.ugurbuga.blockwise.localizedGetString
@@ -548,26 +553,12 @@ fun BlockLogicContent(
     val rules = remember(state.gridSize, state.difficulty) {
         resolveGameConfig(state.gridSize, state.difficulty).rules
     }
-    val dragPreviewCells = remember(
-        draggingPieceSnapshot?.id,
-        dragSnappedPlacement,
-    ) {
-        val piece = draggingPieceSnapshot
-        val placement = dragSnappedPlacement
-        if (piece == null || placement == null) {
-            emptySet()
-        } else {
-            previewCellsForPlacement(
-                piece = piece,
-                origin = CellCoord(placement.originX, placement.originY),
-            )
-        }
-    }
-    val highlightedCells = when {
-        draggingPieceId != null && dragPreviewCells.isNotEmpty() -> dragPreviewCells
-        draggingPieceId != null -> dragValidCells
-        else -> state.validCells
-    }
+    val highlightedCells = if (draggingPieceId != null) dragValidCells else state.validCells
+    val highlightedCellColor = draggingPieceSnapshot
+        ?.color
+        ?.toPaletteColor()
+        ?.copy(alpha = 0.5f)
+        ?: MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f)
 
     fun formatPlacement(piece: Piece, placement: DragPlacement?): String {
         return if (placement == null) {
@@ -773,6 +764,7 @@ fun BlockLogicContent(
                 Text(
                     text = stringResource(Res.string.score, state.score),
                     style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 state.movesRemaining?.let { movesRemaining ->
                     Text(
@@ -794,11 +786,39 @@ fun BlockLogicContent(
             }
         }
 
-        SnackbarHost(hostState = snackbarHostState)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 64.dp),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.fillMaxWidth(),
+                snackbar = { data ->
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        tonalElevation = 2.dp,
+                    ) {
+                        Text(
+                            text = data.visuals.message,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            )
+        }
 
             GridView(
                 grid = state.grid,
                 highlightedCells = highlightedCells,
+                highlightedCellColor = highlightedCellColor,
                 clearingRows = state.clearingRows,
                 clearingCols = state.clearingCols,
                 onCellTapped = onCellTapped,
@@ -811,7 +831,13 @@ fun BlockLogicContent(
                     .aspectRatio(1f)
             )
 
-        Text(stringResource(Res.string.select_piece), style = MaterialTheme.typography.titleSmall)
+        Text(
+            text = stringResource(Res.string.select_piece),
+            modifier = Modifier.fillMaxWidth(),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
 
             PiecesRow(
                 pieces = state.pieces,
@@ -1108,22 +1134,14 @@ fun BlockLogicContent(
                 val freeOverlayTopLeftLocal = freeOverlayTopLeftInRoot - contentTopLeftInRoot
                 val placement = dragSnappedPlacement
                 val resolution = computeDragResolution(piece, fingerInRoot)
-                val snappedOverlayTopLeftLocal = placement
-                    ?.let(::snappedOverlayTopLeftInRoot)
-                    ?.minus(contentTopLeftInRoot)
                 val isInvalidInsideBoard = resolution?.isFingerInsideBoard == true && placement == null
-                val displayTopLeftLocal = if (resolution?.isFingerInsideBoard == true) {
-                    snappedOverlayTopLeftLocal ?: freeOverlayTopLeftLocal
-                } else {
-                    freeOverlayTopLeftLocal
-                }
 
                 Box(
                     modifier = Modifier
                         .graphicsLayer {
-                            translationX = displayTopLeftLocal.x
-                            translationY = displayTopLeftLocal.y
-                            alpha = if (snappedOverlayTopLeftLocal != null) 0.98f else 0.92f
+                            translationX = freeOverlayTopLeftLocal.x
+                            translationY = freeOverlayTopLeftLocal.y
+                            alpha = 0.92f
                         }
                         .zIndex(10f)
                         .padding(pieceContainerPaddingDp)
@@ -1165,6 +1183,7 @@ fun BlockLogicContent(
 private fun GridView(
     grid: com.ugurbuga.blockwise.blocklogic.domain.Grid,
     highlightedCells: Set<CellCoord>,
+    highlightedCellColor: Color,
     clearingRows: Set<Int>,
     clearingCols: Set<Int>,
     onCellTapped: (x: Int, y: Int) -> Unit,
@@ -1210,7 +1229,7 @@ private fun GridView(
                             .background(
                                 when {
                                     cell != null -> cell.color.toPaletteColor()
-                                    isHighlightedCell -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f)
+                                    isHighlightedCell -> highlightedCellColor
                                     else -> MaterialTheme.colorScheme.surface
                                 }
                             )
@@ -1239,7 +1258,11 @@ private fun PiecesRow(
     cellSize: Dp,
     containerPadding: Dp,
 ) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.SpaceAround,
+    ) {
         itemsIndexed(
             items = pieces,
             key = { _, piece -> piece.id },

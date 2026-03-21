@@ -334,9 +334,9 @@ class ComposeAppCommonTest {
     @Test
     fun `drag anchor selects the nearest occupied cell for a horizontal bar`() {
         val anchor = resolveDragAnchor(
-            piece = com.ugurbuga.blockwise.blocklogic.domain.Piece(
+            piece = Piece(
                 shape = Shapes.Line3H,
-                color = com.ugurbuga.blockwise.blocklogic.domain.BlockColor.Blue,
+                color = BlockColor.Blue,
             ),
             offsetInContent = Offset(118f, 20f),
             cellWidthPx = 48f,
@@ -351,9 +351,9 @@ class ComposeAppCommonTest {
     @Test
     fun `drag anchor selects the nearest occupied cell for a vertical bar`() {
         val anchor = resolveDragAnchor(
-            piece = com.ugurbuga.blockwise.blocklogic.domain.Piece(
+            piece = Piece(
                 shape = Shapes.Line3V,
-                color = com.ugurbuga.blockwise.blocklogic.domain.BlockColor.Red,
+                color = BlockColor.Red,
             ),
             offsetInContent = Offset(20f, 118f),
             cellWidthPx = 48f,
@@ -759,6 +759,10 @@ class ComposeAppCommonTest {
             listOf(AppScreen.LevelSelection),
             popScreen(rootStack)
         )
+        assertEquals(
+            listOf(AppScreen.LevelSelection, AppScreen.Settings),
+            pushScreen(rootStack, AppScreen.Settings)
+        )
     }
 
     @Test
@@ -772,6 +776,10 @@ class ComposeAppCommonTest {
             scrollStateKey(AppScreen.Scores, GridSize(8), Difficulty.Easy)
         )
         assertEquals(
+            AppScreen.Settings.name,
+            scrollStateKey(AppScreen.Settings, GridSize(8), Difficulty.Easy)
+        )
+        assertEquals(
             "Rules:10:Normal",
             scrollStateKey(AppScreen.Rules, GridSize(10), Difficulty.Normal)
         )
@@ -779,6 +787,12 @@ class ComposeAppCommonTest {
             "Rules:12:Hard",
             scrollStateKey(AppScreen.Rules, GridSize(12), Difficulty.Hard)
         )
+    }
+
+    @Test
+    fun `screen state keys stay stable for settings and game sessions`() {
+        assertEquals(AppScreen.Settings.name, screenStateKey(AppScreen.Settings, 0))
+        assertEquals("Game:3", screenStateKey(AppScreen.Game, 3))
     }
 
     @Test
@@ -834,6 +848,23 @@ class ComposeAppCommonTest {
         assertEquals(false, AppLanguage.German.isRtl)
         assertEquals(false, AppLanguage.Russian.isRtl)
         assertEquals(true, AppLanguage.Arabic.isRtl)
+    }
+
+    @Test
+    fun `theme mode storage mapping supports system light and dark`() {
+        assertEquals(null, AppThemeMode.fromStorageValue(null))
+        assertEquals(null, AppThemeMode.fromStorageValue("amoled"))
+        assertEquals(AppThemeMode.System, AppThemeMode.fromStorageValue("system"))
+        assertEquals(AppThemeMode.Light, AppThemeMode.fromStorageValue("light"))
+        assertEquals(AppThemeMode.Dark, AppThemeMode.fromStorageValue("dark"))
+    }
+
+    @Test
+    fun `theme picker options stay stable and user friendly`() {
+        assertEquals(listOf(AppThemeMode.System, AppThemeMode.Light, AppThemeMode.Dark), SelectableThemeModes)
+        assertEquals("system", AppThemeMode.System.storageValue)
+        assertEquals("light", AppThemeMode.Light.storageValue)
+        assertEquals("dark", AppThemeMode.Dark.storageValue)
     }
 
     @Test

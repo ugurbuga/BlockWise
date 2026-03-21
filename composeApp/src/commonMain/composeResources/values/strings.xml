@@ -5,6 +5,11 @@
     <string name="grid_size_option">%1$dx%1$d</string>
     <string name="difficulty">Difficulty</string>
     <string name="language">Language</string>
+    <string name="settings">Settings</string>
+    <string name="theme">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
     <string name="language_english">English</string>
     <string name="language_turkish">Turkish</string>
     <string name="language_spanish">Spanish</string>

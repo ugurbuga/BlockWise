@@ -22,6 +22,7 @@ import blockwise.composeapp.generated.resources.invalid_placement_distinct_col
 import blockwise.composeapp.generated.resources.invalid_placement_distinct_row
 import blockwise.composeapp.generated.resources.invalid_placement_out_of_bounds
 import blockwise.composeapp.generated.resources.invalid_placement_overlap
+import blockwise.composeapp.generated.resources.language
 import blockwise.composeapp.generated.resources.level_selection_title
 import blockwise.composeapp.generated.resources.menu
 import blockwise.composeapp.generated.resources.moves_remaining
@@ -59,9 +60,14 @@ import blockwise.composeapp.generated.resources.score
 import blockwise.composeapp.generated.resources.scores
 import blockwise.composeapp.generated.resources.scores_best_for_mode
 import blockwise.composeapp.generated.resources.scores_empty
+import blockwise.composeapp.generated.resources.settings
 import blockwise.composeapp.generated.resources.scores_title
 import blockwise.composeapp.generated.resources.select_piece
 import blockwise.composeapp.generated.resources.selected_mode_best_score
+import blockwise.composeapp.generated.resources.theme
+import blockwise.composeapp.generated.resources.theme_dark
+import blockwise.composeapp.generated.resources.theme_light
+import blockwise.composeapp.generated.resources.theme_system
 
 internal val LocalAppLanguage = staticCompositionLocalOf { AppLanguage.English }
 
@@ -103,6 +109,26 @@ internal fun localizedGetString(language: AppLanguage, resource: StringResource,
 
         Res.string.grid_size_option -> gridSizeOptionValue(intArg(0))
 
+        Res.string.language -> when (language) {
+            AppLanguage.English -> "Language"
+            AppLanguage.Turkish -> "Dil"
+            AppLanguage.Spanish -> "Idioma"
+            AppLanguage.French -> "Langue"
+            AppLanguage.German -> "Sprache"
+            AppLanguage.Russian -> "Язык"
+            AppLanguage.Arabic -> "اللغة"
+        }
+
+        Res.string.settings -> when (language) {
+            AppLanguage.English -> "Settings"
+            AppLanguage.Turkish -> "Ayarlar"
+            AppLanguage.Spanish -> "Ajustes"
+            AppLanguage.French -> "Réglages"
+            AppLanguage.German -> "Einstellungen"
+            AppLanguage.Russian -> "Настройки"
+            AppLanguage.Arabic -> "الإعدادات"
+        }
+
         Res.string.difficulty -> when (language) {
             AppLanguage.English -> "Difficulty"
             AppLanguage.Turkish -> "Zorluk"
@@ -111,6 +137,46 @@ internal fun localizedGetString(language: AppLanguage, resource: StringResource,
             AppLanguage.German -> "Schwierigkeit"
             AppLanguage.Russian -> "Сложность"
             AppLanguage.Arabic -> "مستوى الصعوبة"
+        }
+
+        Res.string.theme -> when (language) {
+            AppLanguage.English -> "Theme"
+            AppLanguage.Turkish -> "Tema"
+            AppLanguage.Spanish -> "Tema"
+            AppLanguage.French -> "Thème"
+            AppLanguage.German -> "Design"
+            AppLanguage.Russian -> "Тема"
+            AppLanguage.Arabic -> "المظهر"
+        }
+
+        Res.string.theme_system -> when (language) {
+            AppLanguage.English -> "System"
+            AppLanguage.Turkish -> "Sistem"
+            AppLanguage.Spanish -> "Sistema"
+            AppLanguage.French -> "Système"
+            AppLanguage.German -> "System"
+            AppLanguage.Russian -> "Система"
+            AppLanguage.Arabic -> "النظام"
+        }
+
+        Res.string.theme_light -> when (language) {
+            AppLanguage.English -> "Light"
+            AppLanguage.Turkish -> "Açık"
+            AppLanguage.Spanish -> "Claro"
+            AppLanguage.French -> "Clair"
+            AppLanguage.German -> "Hell"
+            AppLanguage.Russian -> "Светлая"
+            AppLanguage.Arabic -> "فاتح"
+        }
+
+        Res.string.theme_dark -> when (language) {
+            AppLanguage.English -> "Dark"
+            AppLanguage.Turkish -> "Koyu"
+            AppLanguage.Spanish -> "Oscuro"
+            AppLanguage.French -> "Sombre"
+            AppLanguage.German -> "Dunkel"
+            AppLanguage.Russian -> "Тёмная"
+            AppLanguage.Arabic -> "داكن"
         }
 
         Res.string.difficulty_easy -> when (language) {

@@ -16,14 +16,18 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.material3.MaterialTheme
+import com.arkivanov.decompose.router.stack.active
 
 import com.ugurbuga.blockwise.blocklogic.ui.BlockLogicScreen
 import com.ugurbuga.blockwise.blocklogic.ui.LevelSelectionScreen
 import com.ugurbuga.blockwise.blocklogic.ui.RulesScreen
 import com.ugurbuga.blockwise.blocklogic.ui.ScoresScreen
+import com.ugurbuga.blockwise.blocklogic.ui.SettingsScreen
 import com.ugurbuga.blockwise.blocklogic.domain.Difficulty
 import com.ugurbuga.blockwise.blocklogic.domain.GameModeKey
 import com.ugurbuga.blockwise.blocklogic.domain.GridSize
+import com.ugurbuga.blockwise.navigation.AppRootComponent
+import com.ugurbuga.blockwise.navigation.subscribeAsState
 import com.ugurbuga.blockwise.ui.theme.BlockWiseTheme
 
 internal enum class AppScreen {
@@ -31,6 +35,7 @@ internal enum class AppScreen {
     Game,
     Rules,
     Scores,
+    Settings,
 }
 
 internal fun pushScreen(backStack: List<AppScreen>, destination: AppScreen): List<AppScreen> {
@@ -51,6 +56,7 @@ internal fun screenStateKey(screen: AppScreen, gameSessionKey: Int): String {
         AppScreen.Game -> "${AppScreen.Game.name}:$gameSessionKey"
         AppScreen.Rules -> AppScreen.Rules.name
         AppScreen.Scores -> AppScreen.Scores.name
+        AppScreen.Settings -> AppScreen.Settings.name
     }
 }
 
@@ -64,17 +70,20 @@ internal fun scrollStateKey(
         AppScreen.Game -> "${AppScreen.Game.name}:${selectedSize.value}:${selectedDifficulty.name}"
         AppScreen.Rules -> "${AppScreen.Rules.name}:${selectedSize.value}:${selectedDifficulty.name}"
         AppScreen.Scores -> AppScreen.Scores.name
+        AppScreen.Settings -> AppScreen.Settings.name
     }
 }
 
 @Composable
 @Preview
 fun App() {
-    BlockWiseTheme {
-        var backStack by remember { mutableStateOf(resetToRoot()) }
+    var appThemeMode by rememberSaveable { mutableStateOf(initializeAppThemeMode()) }
+
+    BlockWiseTheme(themeMode = appThemeMode) {
+        val navigation = remember { AppRootComponent() }
+        val childStack by navigation.childStack.subscribeAsState()
         var selectedSize by remember { mutableStateOf(GridSize(10)) }
         var selectedDifficulty by remember { mutableStateOf(Difficulty.Normal) }
-        var gameSessionKey by remember { mutableStateOf(0) }
         var appLanguage by rememberSaveable { mutableStateOf(initializeAppLanguage()) }
         val pageScrollOffsets = rememberSaveable(
             saver = mapSaver(
@@ -96,7 +105,7 @@ fun App() {
                 putAll(BestScoreStore.loadScores())
             }
         }
-        val currentScreen = backStack.last()
+        val currentChild = childStack.active.instance
 
         fun recordBestScore(size: GridSize, difficulty: Difficulty, score: Int) {
             val key = GameModeKey(size, difficulty)
@@ -107,8 +116,8 @@ fun App() {
             }
         }
 
-        PlatformBackHandler(enabled = backStack.size > 1) {
-            backStack = popScreen(backStack)
+        PlatformBackHandler(enabled = navigation.canPop) {
+            navigation.onBack()
         }
 
         Box(
@@ -137,11 +146,38 @@ fun App() {
                     },
                 ) {
                     key(appLanguage) {
+                        val screenStateKey = when (currentChild) {
+                            AppRootComponent.Child.LevelSelection -> screenStateKey(
+                                AppScreen.LevelSelection,
+                                gameSessionKey = 0,
+                            )
+
+                            is AppRootComponent.Child.Game -> screenStateKey(
+                                AppScreen.Game,
+                                gameSessionKey = currentChild.sessionKey,
+                            )
+
+                            AppRootComponent.Child.Rules -> screenStateKey(
+                                AppScreen.Rules,
+                                gameSessionKey = 0,
+                            )
+
+                            AppRootComponent.Child.Scores -> screenStateKey(
+                                AppScreen.Scores,
+                                gameSessionKey = 0,
+                            )
+
+                            AppRootComponent.Child.Settings -> screenStateKey(
+                                AppScreen.Settings,
+                                gameSessionKey = 0,
+                            )
+                        }
+
                         saveableStateHolder.SaveableStateProvider(
-                            key = screenStateKey(currentScreen, gameSessionKey),
+                            key = screenStateKey,
                         ) {
-                            when (currentScreen) {
-                                AppScreen.LevelSelection -> {
+                            when (currentChild) {
+                                AppRootComponent.Child.LevelSelection -> {
                                     val levelSelectionScrollKey = scrollStateKey(
                                         AppScreen.LevelSelection,
                                         selectedSize,
@@ -151,25 +187,19 @@ fun App() {
                                         modifier = Modifier.fillMaxSize(),
                                         selectedSize = selectedSize,
                                         selectedDifficulty = selectedDifficulty,
-                                        selectedLanguage = appLanguage,
                                         onSizeSelected = { selectedSize = it },
                                         onDifficultySelected = { selectedDifficulty = it },
-                                        onLanguageSelected = { language ->
-                                            if (language != appLanguage) {
-                                                AppLanguageStore.saveSelectedLanguage(language)
-                                                AppLanguageStore.applyLanguage(language, refreshUi = true)
-                                                appLanguage = language
-                                            }
-                                        },
                                         onOpenRules = {
-                                            backStack = pushScreen(backStack, AppScreen.Rules)
+                                            navigation.openRules()
                                         },
                                         onOpenScores = {
-                                            backStack = pushScreen(backStack, AppScreen.Scores)
+                                            navigation.openScores()
+                                        },
+                                        onOpenSettings = {
+                                            navigation.openSettings()
                                         },
                                         onPlay = {
-                                            gameSessionKey += 1
-                                            backStack = pushScreen(backStack, AppScreen.Game)
+                                            navigation.openGame()
                                         },
                                         bestScoreForSelection = bestScores[GameModeKey(
                                             selectedSize,
@@ -183,18 +213,18 @@ fun App() {
                                     )
                                 }
 
-                                AppScreen.Game -> {
+                                is AppRootComponent.Child.Game -> {
                                     BlockLogicScreen(
                                         modifier = Modifier.fillMaxSize(),
                                         initialSize = selectedSize,
                                         initialDifficulty = selectedDifficulty,
-                                        sessionKey = gameSessionKey.toString(),
-                                        onMenu = { backStack = resetToRoot() },
+                                        sessionKey = currentChild.sessionKey.toString(),
+                                        onMenu = { navigation.returnToRoot() },
                                         onRecordScore = ::recordBestScore,
                                     )
                                 }
 
-                                AppScreen.Rules -> {
+                                AppRootComponent.Child.Rules -> {
                                     val rulesScrollKey = scrollStateKey(
                                         AppScreen.Rules,
                                         selectedSize,
@@ -204,7 +234,7 @@ fun App() {
                                         modifier = Modifier.fillMaxSize(),
                                         gridSize = selectedSize,
                                         difficulty = selectedDifficulty,
-                                        onBack = { backStack = popScreen(backStack) },
+                                        onBack = { navigation.onBack() },
                                         initialScroll = pageScrollOffsets[rulesScrollKey] ?: 0,
                                         onScrollChanged = {
                                             pageScrollOffsets[rulesScrollKey] = it
@@ -212,7 +242,7 @@ fun App() {
                                     )
                                 }
 
-                                AppScreen.Scores -> {
+                                AppRootComponent.Child.Scores -> {
                                     val scoresScrollKey = scrollStateKey(
                                         AppScreen.Scores,
                                         selectedSize,
@@ -221,10 +251,40 @@ fun App() {
                                     ScoresScreen(
                                         modifier = Modifier.fillMaxSize(),
                                         bestScores = bestScores,
-                                        onBack = { backStack = popScreen(backStack) },
+                                        onBack = { navigation.onBack() },
                                         initialScroll = pageScrollOffsets[scoresScrollKey] ?: 0,
                                         onScrollChanged = {
                                             pageScrollOffsets[scoresScrollKey] = it
+                                        },
+                                    )
+                                }
+
+                                AppRootComponent.Child.Settings -> {
+                                    val settingsScrollKey = scrollStateKey(
+                                        AppScreen.Settings,
+                                        selectedSize,
+                                        selectedDifficulty,
+                                    )
+                                    SettingsScreen(
+                                        modifier = Modifier.fillMaxSize(),
+                                        selectedLanguage = appLanguage,
+                                        selectedThemeMode = appThemeMode,
+                                        onLanguageSelected = { language ->
+                                            if (language != appLanguage) {
+                                                appLanguage = language
+                                                AppLanguageStore.saveSelectedLanguage(language)
+                                            }
+                                        },
+                                        onThemeModeSelected = { themeMode ->
+                                            if (themeMode != appThemeMode) {
+                                                AppThemeModeStore.saveSelectedThemeMode(themeMode)
+                                                appThemeMode = themeMode
+                                            }
+                                        },
+                                        onBack = { navigation.onBack() },
+                                        initialScroll = pageScrollOffsets[settingsScrollKey] ?: 0,
+                                        onScrollChanged = {
+                                            pageScrollOffsets[settingsScrollKey] = it
                                         },
                                     )
                                 }

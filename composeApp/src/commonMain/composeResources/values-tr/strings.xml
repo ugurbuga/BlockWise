@@ -4,6 +4,11 @@
     <string name="grid_size">Izgara Boyutu</string>
     <string name="grid_size_option">%1$dx%1$d</string>
     <string name="language">Dil</string>
+    <string name="settings">Ayarlar</string>
+    <string name="theme">Tema</string>
+    <string name="theme_system">Sistem</string>
+    <string name="theme_light">Açık</string>
+    <string name="theme_dark">Koyu</string>
     <string name="language_english">İngilizce</string>
     <string name="language_turkish">Türkçe</string>
     <string name="language_spanish">İspanyolca</string>

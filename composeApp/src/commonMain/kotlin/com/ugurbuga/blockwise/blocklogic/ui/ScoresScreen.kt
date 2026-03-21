@@ -141,9 +141,10 @@ private fun ScoreTableHeader() {
         )
         ScoreTableCell(
             text = stringResource(Res.string.difficulty),
-            weight = 1.2f,
+            weight = 1f,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary,
+            textAlign = TextAlign.Center,
         )
         ScoreTableCell(
             text = stringResource(Res.string.scores_best_for_mode),
@@ -186,9 +187,10 @@ private fun ScoreTableRow(
             )
             ScoreTableCell(
                 text = difficultyLabel(mode.difficulty),
-                weight = 1.2f,
+                weight = 1f,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
             )
             ScoreTableCell(
                 text = formatBestScore(bestScore, stringResource(Res.string.scores_empty)),

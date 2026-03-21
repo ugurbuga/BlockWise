@@ -5,6 +5,11 @@
     <string name="grid_size_option">%1$dx%1$d</string>
     <string name="difficulty">مستوى الصعوبة</string>
     <string name="language">اللغة</string>
+    <string name="settings">الإعدادات</string>
+    <string name="theme">المظهر</string>
+    <string name="theme_system">النظام</string>
+    <string name="theme_light">فاتح</string>
+    <string name="theme_dark">داكن</string>
     <string name="language_english">الإنجليزية</string>
     <string name="language_turkish">التركية</string>
     <string name="language_spanish">الإسبانية</string>

@@ -4,55 +4,29 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowDropDown
-import androidx.compose.material.icons.rounded.ArrowDropUp
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.ugurbuga.blockwise.AppLanguage
-import com.ugurbuga.blockwise.SelectableAppLanguages
 import com.ugurbuga.blockwise.localizedStringResource as stringResource
 import com.ugurbuga.blockwise.blocklogic.domain.Difficulty
 import com.ugurbuga.blockwise.blocklogic.domain.GridSize
@@ -71,6 +45,7 @@ import blockwise.composeapp.generated.resources.grid_size_option
 import blockwise.composeapp.generated.resources.level_selection_title
 import blockwise.composeapp.generated.resources.scores
 import blockwise.composeapp.generated.resources.selected_mode_best_score
+import blockwise.composeapp.generated.resources.settings
 import blockwise.composeapp.generated.resources.rules_rule_1_title
 import blockwise.composeapp.generated.resources.rules_rule_1_desc_disabled
 import blockwise.composeapp.generated.resources.rules_rule_1_desc_enabled
@@ -98,17 +73,15 @@ import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun LevelSelectionScreen(
     selectedSize: GridSize,
     selectedDifficulty: Difficulty,
-    selectedLanguage: AppLanguage,
     onSizeSelected: (GridSize) -> Unit,
     onDifficultySelected: (Difficulty) -> Unit,
-    onLanguageSelected: (AppLanguage) -> Unit,
     onOpenRules: () -> Unit,
     onOpenScores: () -> Unit,
+    onOpenSettings: () -> Unit,
     onPlay: () -> Unit,
     bestScoreForSelection: Int?,
     initialScroll: Int = 0,
@@ -117,8 +90,6 @@ internal fun LevelSelectionScreen(
 ) {
     val config = resolveGameConfig(selectedSize, selectedDifficulty)
     val scrollState = rememberScrollState(initial = initialScroll)
-    var isLanguageMenuExpanded by remember { mutableStateOf(false) }
-    var pendingLanguageSelection by remember { mutableStateOf<AppLanguage?>(null) }
     val gridSizeOptions = supportedGridSizes().map { size ->
         ChipOption(
             value = size,
@@ -135,15 +106,6 @@ internal fun LevelSelectionScreen(
         snapshotFlow { scrollState.value }
             .distinctUntilChanged()
             .collectLatest(onScrollChanged)
-    }
-
-    LaunchedEffect(isLanguageMenuExpanded, pendingLanguageSelection) {
-        val language = pendingLanguageSelection ?: return@LaunchedEffect
-        if (!isLanguageMenuExpanded) {
-            withFrameNanos { }
-            onLanguageSelected(language)
-            pendingLanguageSelection = null
-        }
     }
 
     Column(
@@ -169,126 +131,8 @@ internal fun LevelSelectionScreen(
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary,
                 )
-
-                ExposedDropdownMenuBox(
-                    expanded = isLanguageMenuExpanded,
-                    onExpandedChange = { isLanguageMenuExpanded = !isLanguageMenuExpanded },
-                    modifier = Modifier.wrapContentWidth(Alignment.End),
-                ) {
-                    val languageSelectorShape = RoundedCornerShape(20.dp)
-                    Row(
-                        modifier = Modifier
-                            .menuAnchor(
-                                type = ExposedDropdownMenuAnchorType.PrimaryNotEditable,
-                                enabled = true,
-                            )
-                            .clip(languageSelectorShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(
-                                width = 1.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant,
-                                shape = languageSelectorShape,
-                            )
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Translate,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            text = selectedLanguage.abbreviation,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Icon(
-                            imageVector = if (isLanguageMenuExpanded) {
-                                Icons.Rounded.ArrowDropUp
-                            } else {
-                                Icons.Rounded.ArrowDropDown
-                            },
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-
-                    ExposedDropdownMenu(
-                        expanded = isLanguageMenuExpanded,
-                        onDismissRequest = { isLanguageMenuExpanded = false },
-                        modifier = Modifier.widthIn(min = 200.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 4.dp,
-                        shadowElevation = 8.dp,
-                    ) {
-                        SelectableAppLanguages.forEach { language ->
-                            val isSelected = language == selectedLanguage
-                            DropdownMenuItem(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(
-                                        color = if (isSelected) {
-                                            MaterialTheme.colorScheme.primaryContainer
-                                        } else {
-                                            Color.Transparent
-                                        },
-                                    ),
-                                text = {
-                                    Text(
-                                        text = languageLabel(language),
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                                        color = if (isSelected) {
-                                            MaterialTheme.colorScheme.onPrimaryContainer
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        },
-                                        maxLines = 1,
-                                        softWrap = false,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                },
-                                leadingIcon = {
-                                    if (isSelected) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Check,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        )
-                                    } else {
-                                        Spacer(modifier = Modifier.width(24.dp))
-                                    }
-                                },
-                                trailingIcon = {
-                                    Text(
-                                        text = language.abbreviation,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = if (isSelected) {
-                                            MaterialTheme.colorScheme.onPrimaryContainer
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
-                                    )
-                                },
-                                colors = MenuDefaults.itemColors(
-                                    textColor = MaterialTheme.colorScheme.onSurface,
-                                    leadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    trailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                                    disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
-                                    disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
-                                ),
-                                onClick = {
-                                    isLanguageMenuExpanded = false
-                                    pendingLanguageSelection = language
-                                },
-                            )
-                        }
-                    }
+                Button(onClick = onOpenSettings) {
+                    Text(stringResource(Res.string.settings))
                 }
             }
 
@@ -456,19 +300,15 @@ internal fun LevelSelectionScreen(
 }
 
 @Composable
-private fun languageLabel(language: AppLanguage): String {
-    return language.endonym
-}
-
-@Composable
 private fun <T> SelectionChipGroup(
     title: String,
     selectedValue: T,
     options: List<ChipOption<T>>,
     onSelected: (T) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
@@ -566,12 +406,11 @@ private fun LevelSelectionScreenPreview() {
         LevelSelectionScreen(
             selectedSize = GridSize(14),
             selectedDifficulty = Difficulty.VeryHard,
-            selectedLanguage = AppLanguage.English,
             onSizeSelected = {},
             onDifficultySelected = {},
-            onLanguageSelected = {},
             onOpenRules = {},
             onOpenScores = {},
+            onOpenSettings = {},
             onPlay = {},
             bestScoreForSelection = 124,
         )
