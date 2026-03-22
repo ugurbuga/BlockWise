@@ -6,22 +6,23 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,14 +38,8 @@ import com.ugurbuga.blockwise.blocklogic.domain.GameModeKey
 import com.ugurbuga.blockwise.blocklogic.domain.GridSize
 import com.ugurbuga.blockwise.blocklogic.domain.allGameModes
 import com.ugurbuga.blockwise.ui.theme.BlockWiseTheme
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
 import blockwise.composeapp.generated.resources.Res
 import blockwise.composeapp.generated.resources.back
-import blockwise.composeapp.generated.resources.difficulty_easy
-import blockwise.composeapp.generated.resources.difficulty_hard
-import blockwise.composeapp.generated.resources.difficulty_normal
-import blockwise.composeapp.generated.resources.difficulty_very_hard
 import blockwise.composeapp.generated.resources.grid_size
 import blockwise.composeapp.generated.resources.grid_size_option
 import blockwise.composeapp.generated.resources.difficulty
@@ -64,13 +59,10 @@ fun ScoresScreen(
     onScrollChanged: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val scrollState = rememberScrollState(initial = initialScroll)
-
-    LaunchedEffect(scrollState) {
-        snapshotFlow { scrollState.value }
-            .distinctUntilChanged()
-            .collectLatest(onScrollChanged)
-    }
+    val scrollState = rememberPersistedScrollState(
+        initialScroll = initialScroll,
+        onScrollChanged = onScrollChanged,
+    )
 
     Column(
         modifier = modifier
@@ -82,24 +74,29 @@ fun ScoresScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .widthIn(max = 760.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .widthIn(max = ScreenContentMaxWidth),
+            horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(Res.string.back),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = stringResource(Res.string.scores_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
-            Button(onClick = onBack) {
-                Text(stringResource(Res.string.back))
-            }
         }
 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .widthIn(max = 760.dp),
+                .widthIn(max = ScreenContentMaxWidth),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Surface(
@@ -138,6 +135,7 @@ private fun ScoreTableHeader() {
             weight = 1f,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary,
+            maxLines = 2,
         )
         ScoreTableCell(
             text = stringResource(Res.string.difficulty),
@@ -145,6 +143,7 @@ private fun ScoreTableHeader() {
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary,
             textAlign = TextAlign.Center,
+            maxLines = 2,
         )
         ScoreTableCell(
             text = stringResource(Res.string.scores_best_for_mode),
@@ -152,6 +151,7 @@ private fun ScoreTableHeader() {
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary,
             textAlign = TextAlign.End,
+            maxLines = 2,
         )
     }
 }
@@ -217,6 +217,7 @@ private fun RowScope.ScoreTableCell(
     fontWeight: FontWeight? = null,
     color: Color = MaterialTheme.colorScheme.onSurface,
     textAlign: TextAlign = TextAlign.Start,
+    maxLines: Int = 1,
 ) {
     Text(
         text = text,
@@ -227,20 +228,11 @@ private fun RowScope.ScoreTableCell(
         fontWeight = fontWeight,
         color = color,
         textAlign = textAlign,
-        maxLines = 1,
+        maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
     )
 }
 
-@Composable
-private fun difficultyLabel(difficulty: Difficulty): String {
-    return when (difficulty) {
-        Difficulty.Easy -> stringResource(Res.string.difficulty_easy)
-        Difficulty.Normal -> stringResource(Res.string.difficulty_normal)
-        Difficulty.Hard -> stringResource(Res.string.difficulty_hard)
-        Difficulty.VeryHard -> stringResource(Res.string.difficulty_very_hard)
-    }
-}
 
 @Preview(showBackground = true)
 @Composable

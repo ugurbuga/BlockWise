@@ -24,6 +24,17 @@ data class GameConfig(
     val maxShapeDimension: Int,
 )
 
+internal fun resolveMoveLimit(gridSize: Int, difficulty: Difficulty): Int? {
+    return when (difficulty) {
+        Difficulty.Easy,
+        Difficulty.Normal,
+        -> null
+
+        Difficulty.Hard -> gridSize * 4 + 6
+        Difficulty.VeryHard -> gridSize * 4 + 2
+    }
+}
+
 fun supportedGridSizes(): List<GridSize> = listOf(8, 10, 12, 14).map(::GridSize)
 
 fun supportedDifficulties(): List<Difficulty> = Difficulty.entries
@@ -68,7 +79,7 @@ fun resolveGameConfig(
             maxSameColorRatio = 0.60f,
             maxAdjacentSameColor = 3,
             minColorVariety = 3,
-            moveLimit = 36,
+            moveLimit = resolveMoveLimit(gridSize.value, Difficulty.Hard),
             preFilledRatio = 0.14f,
             lockedCellsRatio = 0f,
         )
@@ -79,7 +90,7 @@ fun resolveGameConfig(
             maxSameColorRatio = 0.50f,
             maxAdjacentSameColor = 4,
             minColorVariety = 4,
-            moveLimit = 32,
+            moveLimit = resolveMoveLimit(gridSize.value, Difficulty.VeryHard),
             preFilledRatio = 0.15f,
             lockedCellsRatio = 0.02f,
         )

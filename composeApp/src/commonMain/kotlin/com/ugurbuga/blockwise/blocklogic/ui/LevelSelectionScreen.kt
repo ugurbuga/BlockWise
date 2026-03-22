@@ -4,27 +4,34 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.ugurbuga.blockwise.localizedStringResource as stringResource
@@ -36,10 +43,6 @@ import com.ugurbuga.blockwise.ui.theme.BlockWiseTheme
 
 import blockwise.composeapp.generated.resources.Res
 import blockwise.composeapp.generated.resources.difficulty
-import blockwise.composeapp.generated.resources.difficulty_easy
-import blockwise.composeapp.generated.resources.difficulty_hard
-import blockwise.composeapp.generated.resources.difficulty_normal
-import blockwise.composeapp.generated.resources.difficulty_very_hard
 import blockwise.composeapp.generated.resources.grid_size
 import blockwise.composeapp.generated.resources.grid_size_option
 import blockwise.composeapp.generated.resources.level_selection_title
@@ -69,9 +72,7 @@ import blockwise.composeapp.generated.resources.play
 import blockwise.composeapp.generated.resources.rules
 import blockwise.composeapp.generated.resources.rules_title
 import blockwise.composeapp.generated.resources.rules_current_mode
-import androidx.compose.runtime.snapshotFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
+import blockwise.composeapp.generated.resources.scores_empty
 
 @Composable
 internal fun LevelSelectionScreen(
@@ -89,7 +90,10 @@ internal fun LevelSelectionScreen(
     modifier: Modifier = Modifier,
 ) {
     val config = resolveGameConfig(selectedSize, selectedDifficulty)
-    val scrollState = rememberScrollState(initial = initialScroll)
+    val scrollState = rememberPersistedScrollState(
+        initialScroll = initialScroll,
+        onScrollChanged = onScrollChanged,
+    )
     val gridSizeOptions = supportedGridSizes().map { size ->
         ChipOption(
             value = size,
@@ -97,16 +101,15 @@ internal fun LevelSelectionScreen(
         )
     }
     val difficultyOptions = listOf(
-        ChipOption(Difficulty.Easy, stringResource(Res.string.difficulty_easy)),
-        ChipOption(Difficulty.Normal, stringResource(Res.string.difficulty_normal)),
-        ChipOption(Difficulty.Hard, stringResource(Res.string.difficulty_hard)),
-        ChipOption(Difficulty.VeryHard, stringResource(Res.string.difficulty_very_hard)),
+        ChipOption(Difficulty.Easy, difficultyLabel(Difficulty.Easy)),
+        ChipOption(Difficulty.Normal, difficultyLabel(Difficulty.Normal)),
+        ChipOption(Difficulty.Hard, difficultyLabel(Difficulty.Hard)),
+        ChipOption(Difficulty.VeryHard, difficultyLabel(Difficulty.VeryHard)),
     )
-    LaunchedEffect(scrollState) {
-        snapshotFlow { scrollState.value }
-            .distinctUntilChanged()
-            .collectLatest(onScrollChanged)
-    }
+    val bestScoreLabel = formatBestScore(
+        bestScore = bestScoreForSelection,
+        emptyPlaceholder = stringResource(Res.string.scores_empty),
+    )
 
     Column(
         modifier = modifier
@@ -118,37 +121,43 @@ internal fun LevelSelectionScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .widthIn(max = 760.dp),
+                .widthIn(max = ScreenContentMaxWidth),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(Res.string.level_selection_title),
+                    modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Button(onClick = onOpenSettings) {
+                    Icon(
+                        imageVector = Icons.Filled.Settings,
+                        contentDescription = null,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(Res.string.settings))
                 }
             }
 
-            bestScoreForSelection?.let { bestScore ->
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    tonalElevation = 2.dp,
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                ) {
-                    Text(
-                        text = stringResource(Res.string.selected_mode_best_score, bestScore),
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
-                }
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                tonalElevation = 2.dp,
+                color = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Text(
+                    text = stringResource(Res.string.selected_mode_best_score, bestScoreLabel),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
             }
 
             Surface(
@@ -181,6 +190,11 @@ internal fun LevelSelectionScreen(
                         onClick = onPlay,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
+                        Icon(
+                            imageVector = Icons.Filled.PlayArrow,
+                            contentDescription = null,
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(stringResource(Res.string.play))
                     }
                 }
@@ -284,11 +298,25 @@ internal fun LevelSelectionScreen(
                         ),
                     )
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
                         Button(onClick = onOpenRules) {
+                            Icon(
+                                imageVector = Icons.Filled.Gavel,
+                                contentDescription = null,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(stringResource(Res.string.rules))
                         }
                         Button(onClick = onOpenScores) {
+                            Icon(
+                                imageVector = Icons.Filled.EmojiEvents,
+                                contentDescription = null,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(stringResource(Res.string.scores))
                         }
                     }
@@ -328,6 +356,14 @@ private fun <T> SelectionChipGroup(
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
                         selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    ),
+                    elevation = FilterChipDefaults.filterChipElevation(
+                        elevation = 0.dp,
+                        pressedElevation = 0.dp,
+                        focusedElevation = 0.dp,
+                        hoveredElevation = 0.dp,
+                        draggedElevation = 0.dp,
+                        disabledElevation = 0.dp,
                     ),
                     border = FilterChipDefaults.filterChipBorder(
                         enabled = true,
@@ -384,15 +420,6 @@ private fun emphasizedRuleText(
     }
 }
 
-@Composable
-private fun difficultyLabel(difficulty: Difficulty): String {
-    return when (difficulty) {
-        Difficulty.Easy -> stringResource(Res.string.difficulty_easy)
-        Difficulty.Normal -> stringResource(Res.string.difficulty_normal)
-        Difficulty.Hard -> stringResource(Res.string.difficulty_hard)
-        Difficulty.VeryHard -> stringResource(Res.string.difficulty_very_hard)
-    }
-}
 
 private data class ChipOption<T>(
     val value: T,

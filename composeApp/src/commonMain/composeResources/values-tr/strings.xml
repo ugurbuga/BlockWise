@@ -9,6 +9,32 @@
     <string name="theme_system">Sistem</string>
     <string name="theme_light">Açık</string>
     <string name="theme_dark">Koyu</string>
+    <string name="block_color_palette">Blok Renk Paleti</string>
+    <string name="block_palette_classic">Klasik</string>
+    <string name="block_palette_candy">Şeker</string>
+    <string name="block_palette_neon">Neon</string>
+    <string name="block_palette_earth">Toprak</string>
+    <string name="color_palette">Renk Paleti</string>
+    <string name="color_palette_classic">Klasik</string>
+    <string name="color_palette_aurora">Aurora</string>
+    <string name="color_palette_sunset">Gün Batımı</string>
+    <string name="block_style">Blok Stili</string>
+    <string name="block_style_flat">Düz</string>
+    <string name="block_style_raised">Yükseltilmiş 3D</string>
+    <string name="block_style_liquid_glass">Liquid Glass</string>
+    <string name="block_style_neon">Neon</string>
+    <string name="neon_pulse_speed">Neon Nabız Hızı</string>
+    <string name="neon_pulse_speed_slow">Yavaş</string>
+    <string name="neon_pulse_speed_normal">Normal</string>
+    <string name="neon_pulse_speed_fast">Hızlı</string>
+    <string name="drag_finger_offset">Parmak Ofseti</string>
+    <string name="drag_finger_offset_none">Yok</string>
+    <string name="drag_finger_offset_low">Az</string>
+    <string name="drag_finger_offset_medium">Orta</string>
+    <string name="drag_finger_offset_high">Çok</string>
+    <string name="invalid_placement_feedback_mode">Hata Mesajları</string>
+    <string name="invalid_placement_feedback_mode_while_dragging">Parça hareket halindeyken</string>
+    <string name="invalid_placement_feedback_mode_on_drop">Parçayı bıraktığında</string>
     <string name="language_english">İngilizce</string>
     <string name="language_turkish">Türkçe</string>
     <string name="language_spanish">İspanyolca</string>
@@ -42,7 +68,7 @@
     <string name="invalid_placement_distinct_row">Dolu bir satırda en az %1$d farklı renk olmalı.</string>
     <string name="invalid_placement_distinct_col">Dolu bir sütunda en az %1$d farklı renk olmalı.</string>
 
-    <string name="rule_color_limit">Bir satırda aynı renkten %1$d adetten fazla blok olamaz.</string>
+    <string name="rule_color_limit_row">Bir satırda aynı renkten %1$d adetten fazla blok olamaz.</string>
     <string name="rule_color_limit_col">Bir sütunda aynı renkten %1$d adetten fazla blok olamaz.</string>
 
     <string name="game_over">Oyun Bitti</string>
@@ -78,5 +104,5 @@
     <string name="scores_title">Puanlar</string>
     <string name="scores_best_for_mode">En iyi skor</string>
     <string name="scores_empty">-</string>
-    <string name="selected_mode_best_score">Bu mod için en iyi skor: %1$d</string>
+    <string name="selected_mode_best_score">Bu mod için en iyi skor: %1$s</string>
 </resources>

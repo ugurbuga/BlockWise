@@ -62,6 +62,16 @@ class BlockLogicViewModel(
         placePieceAt(pieceId = pieceId, x = x, y = y, source = "drag")
     }
 
+    fun clearPieceSelection() {
+        val state = _uiState.value
+        if (state.selectedPieceIndex == null && state.validOrigins.isEmpty() && state.validCells.isEmpty()) return
+        _uiState.value = state.copy(
+            selectedPieceIndex = null,
+            validOrigins = emptySet(),
+            validCells = emptySet(),
+        )
+    }
+
     private fun placePieceAt(pieceIndex: Int? = null, pieceId: Long? = null, x: Int, y: Int, source: String) {
         val state = _uiState.value
         if (state.isGameOver || state.isAnimatingClear) return

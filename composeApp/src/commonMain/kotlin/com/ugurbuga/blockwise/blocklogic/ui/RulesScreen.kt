@@ -1,18 +1,20 @@
 package com.ugurbuga.blockwise.blocklogic.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -61,12 +63,6 @@ import blockwise.composeapp.generated.resources.rules_prefilled_desc
 import blockwise.composeapp.generated.resources.rules_tips_desc
 import blockwise.composeapp.generated.resources.rules_tips_title
 import blockwise.composeapp.generated.resources.rules_title
-import blockwise.composeapp.generated.resources.difficulty_easy
-import blockwise.composeapp.generated.resources.difficulty_normal
-import blockwise.composeapp.generated.resources.difficulty_hard
-import blockwise.composeapp.generated.resources.difficulty_very_hard
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
 fun RulesScreen(
@@ -78,13 +74,10 @@ fun RulesScreen(
     modifier: Modifier = Modifier,
 ) {
     val config = resolveGameConfig(gridSize, difficulty)
-    val scrollState = rememberScrollState(initial = initialScroll)
-
-    LaunchedEffect(scrollState) {
-        snapshotFlow { scrollState.value }
-            .distinctUntilChanged()
-            .collectLatest(onScrollChanged)
-    }
+    val scrollState = rememberPersistedScrollState(
+        initialScroll = initialScroll,
+        onScrollChanged = onScrollChanged,
+    )
 
     Column(
         modifier = modifier
@@ -93,37 +86,44 @@ fun RulesScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = ScreenContentMaxWidth),
+            horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(Res.string.back),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+            Spacer(modifier = Modifier.size(8.dp))
             Text(
                 stringResource(Res.string.rules_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
-            Button(onClick = onBack) {
-                Text(stringResource(Res.string.back))
-            }
         }
 
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .widthIn(max = ScreenContentMaxWidth)
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(stringResource(Res.string.rules_intro), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = stringResource(Res.string.rules_intro),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Text(
                 text = stringResource(
                     Res.string.rules_current_mode,
                     stringResource(Res.string.grid_size_option, gridSize.value),
-                    when (difficulty) {
-                        Difficulty.Easy -> stringResource(Res.string.difficulty_easy)
-                        Difficulty.Normal -> stringResource(Res.string.difficulty_normal)
-                        Difficulty.Hard -> stringResource(Res.string.difficulty_hard)
-                        Difficulty.VeryHard -> stringResource(Res.string.difficulty_very_hard)
-                    }
+                    difficultyLabel(difficulty)
                 ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -241,20 +241,27 @@ private fun PiecePreviewSmall(piece: Piece) {
     val maxDy = piece.shape.cells.maxOf { it.dy }
     val width = maxDx + 1
     val height = maxDy + 1
+    val cellSize = 14.dp
 
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         for (y in 0 until height) {
             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 for (x in 0 until width) {
                     val filled = piece.shape.cells.any { it.dx == x && it.dy == y }
-                    Box(
+                    BlockTile3D(
+                        fillColor = if (filled) piece.color.toPaletteColor() else MaterialTheme.colorScheme.surfaceVariant,
+                        borderColor = if (filled) {
+                            piece.color.toPaletteColor().darken(0.35f)
+                        } else {
+                            MaterialTheme.colorScheme.outlineVariant
+                        },
+                        borderWidth = 1.dp,
+                        cornerRadius = 4.dp,
+                        recessed = !filled,
+                        elevation = if (filled) 2.dp else 0.dp,
                         modifier = Modifier
-                            .size(14.dp)
-                            .background(
-                                if (filled) piece.color.toPaletteColor() else MaterialTheme.colorScheme.surface
-                            )
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    )
+                            .size(cellSize)
+                    ) {}
                 }
             }
         }

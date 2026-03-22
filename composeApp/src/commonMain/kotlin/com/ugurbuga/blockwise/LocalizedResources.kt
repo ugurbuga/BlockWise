@@ -6,11 +6,30 @@ import org.jetbrains.compose.resources.StringResource
 
 import blockwise.composeapp.generated.resources.Res
 import blockwise.composeapp.generated.resources.back
+import blockwise.composeapp.generated.resources.block_color_palette
+import blockwise.composeapp.generated.resources.block_palette_candy
+import blockwise.composeapp.generated.resources.block_palette_classic
+import blockwise.composeapp.generated.resources.block_palette_earth
+import blockwise.composeapp.generated.resources.block_palette_neon
+import blockwise.composeapp.generated.resources.block_style
+import blockwise.composeapp.generated.resources.block_style_flat
+import blockwise.composeapp.generated.resources.block_style_liquid_glass
+import blockwise.composeapp.generated.resources.block_style_neon
+import blockwise.composeapp.generated.resources.block_style_raised
+import blockwise.composeapp.generated.resources.color_palette
+import blockwise.composeapp.generated.resources.color_palette_aurora
+import blockwise.composeapp.generated.resources.color_palette_classic
+import blockwise.composeapp.generated.resources.color_palette_sunset
 import blockwise.composeapp.generated.resources.difficulty
 import blockwise.composeapp.generated.resources.difficulty_easy
 import blockwise.composeapp.generated.resources.difficulty_hard
 import blockwise.composeapp.generated.resources.difficulty_normal
 import blockwise.composeapp.generated.resources.difficulty_very_hard
+import blockwise.composeapp.generated.resources.drag_finger_offset
+import blockwise.composeapp.generated.resources.drag_finger_offset_high
+import blockwise.composeapp.generated.resources.drag_finger_offset_low
+import blockwise.composeapp.generated.resources.drag_finger_offset_medium
+import blockwise.composeapp.generated.resources.drag_finger_offset_none
 import blockwise.composeapp.generated.resources.game_over
 import blockwise.composeapp.generated.resources.game_over_message
 import blockwise.composeapp.generated.resources.grid_size
@@ -20,16 +39,30 @@ import blockwise.composeapp.generated.resources.invalid_placement_adjacent_col
 import blockwise.composeapp.generated.resources.invalid_placement_adjacent_row
 import blockwise.composeapp.generated.resources.invalid_placement_distinct_col
 import blockwise.composeapp.generated.resources.invalid_placement_distinct_row
+import blockwise.composeapp.generated.resources.invalid_placement_feedback_mode
+import blockwise.composeapp.generated.resources.invalid_placement_feedback_mode_on_drop
+import blockwise.composeapp.generated.resources.invalid_placement_feedback_mode_while_dragging
 import blockwise.composeapp.generated.resources.invalid_placement_out_of_bounds
 import blockwise.composeapp.generated.resources.invalid_placement_overlap
 import blockwise.composeapp.generated.resources.language
+import blockwise.composeapp.generated.resources.language_arabic
+import blockwise.composeapp.generated.resources.language_english
+import blockwise.composeapp.generated.resources.language_french
+import blockwise.composeapp.generated.resources.language_german
+import blockwise.composeapp.generated.resources.language_russian
+import blockwise.composeapp.generated.resources.language_spanish
+import blockwise.composeapp.generated.resources.language_turkish
 import blockwise.composeapp.generated.resources.level_selection_title
 import blockwise.composeapp.generated.resources.menu
 import blockwise.composeapp.generated.resources.moves_remaining
+import blockwise.composeapp.generated.resources.neon_pulse_speed
+import blockwise.composeapp.generated.resources.neon_pulse_speed_fast
+import blockwise.composeapp.generated.resources.neon_pulse_speed_normal
+import blockwise.composeapp.generated.resources.neon_pulse_speed_slow
 import blockwise.composeapp.generated.resources.new_game
 import blockwise.composeapp.generated.resources.ok
 import blockwise.composeapp.generated.resources.play
-import blockwise.composeapp.generated.resources.rule_color_limit
+import blockwise.composeapp.generated.resources.rule_color_limit_row
 import blockwise.composeapp.generated.resources.rule_color_limit_col
 import blockwise.composeapp.generated.resources.rules
 import blockwise.composeapp.generated.resources.rules_adjacent_limit_desc_disabled
@@ -177,6 +210,336 @@ internal fun localizedGetString(language: AppLanguage, resource: StringResource,
             AppLanguage.German -> "Dunkel"
             AppLanguage.Russian -> "Тёмная"
             AppLanguage.Arabic -> "داكن"
+        }
+
+        Res.string.color_palette -> when (language) {
+            AppLanguage.English -> "Theme Color Palette"
+            AppLanguage.Turkish -> "Tema Renk Paleti"
+            AppLanguage.Spanish -> "Paleta de color del tema"
+            AppLanguage.French -> "Palette de couleurs du thème"
+            AppLanguage.German -> "Themen-Farbpalette"
+            AppLanguage.Russian -> "Палитра темы"
+            AppLanguage.Arabic -> "لوحة ألوان السمة"
+        }
+
+        Res.string.color_palette_classic -> when (language) {
+            AppLanguage.English -> "Classic"
+            AppLanguage.Turkish -> "Klasik"
+            AppLanguage.Spanish -> "Clásica"
+            AppLanguage.French -> "Classique"
+            AppLanguage.German -> "Klassisch"
+            AppLanguage.Russian -> "Классика"
+            AppLanguage.Arabic -> "كلاسيكي"
+        }
+
+        Res.string.color_palette_aurora -> when (language) {
+            AppLanguage.English -> "Aurora"
+            AppLanguage.Turkish -> "Aurora"
+            AppLanguage.Spanish -> "Aurora"
+            AppLanguage.French -> "Aurore"
+            AppLanguage.German -> "Aurora"
+            AppLanguage.Russian -> "Аврора"
+            AppLanguage.Arabic -> "أورورا"
+        }
+
+        Res.string.color_palette_sunset -> when (language) {
+            AppLanguage.English -> "Sunset"
+            AppLanguage.Turkish -> "Gün Batımı"
+            AppLanguage.Spanish -> "Atardecer"
+            AppLanguage.French -> "Coucher de soleil"
+            AppLanguage.German -> "Sonnenuntergang"
+            AppLanguage.Russian -> "Закат"
+            AppLanguage.Arabic -> "غروب"
+        }
+
+        Res.string.block_color_palette -> when (language) {
+            AppLanguage.English -> "Block Color Palette"
+            AppLanguage.Turkish -> "Blok Renk Paleti"
+            AppLanguage.Spanish -> "Paleta de color de bloques"
+            AppLanguage.French -> "Palette de couleurs des blocs"
+            AppLanguage.German -> "Block-Farbpalette"
+            AppLanguage.Russian -> "Палитра блоков"
+            AppLanguage.Arabic -> "لوحة ألوان الكتل"
+        }
+
+        Res.string.block_palette_classic -> when (language) {
+            AppLanguage.English -> "Classic"
+            AppLanguage.Turkish -> "Klasik"
+            AppLanguage.Spanish -> "Clásica"
+            AppLanguage.French -> "Classique"
+            AppLanguage.German -> "Klassisch"
+            AppLanguage.Russian -> "Классика"
+            AppLanguage.Arabic -> "كلاسيكي"
+        }
+
+        Res.string.block_palette_candy -> when (language) {
+            AppLanguage.English -> "Candy"
+            AppLanguage.Turkish -> "Şeker"
+            AppLanguage.Spanish -> "Caramelo"
+            AppLanguage.French -> "Bonbon"
+            AppLanguage.German -> "Candy"
+            AppLanguage.Russian -> "Конфетная"
+            AppLanguage.Arabic -> "حلويات"
+        }
+
+        Res.string.block_palette_neon -> when (language) {
+            AppLanguage.English -> "Neon"
+            AppLanguage.Turkish -> "Neon"
+            AppLanguage.Spanish -> "Neón"
+            AppLanguage.French -> "Néon"
+            AppLanguage.German -> "Neon"
+            AppLanguage.Russian -> "Неон"
+            AppLanguage.Arabic -> "نيون"
+        }
+
+        Res.string.block_palette_earth -> when (language) {
+            AppLanguage.English -> "Earth"
+            AppLanguage.Turkish -> "Toprak"
+            AppLanguage.Spanish -> "Tierra"
+            AppLanguage.French -> "Terre"
+            AppLanguage.German -> "Erde"
+            AppLanguage.Russian -> "Земля"
+            AppLanguage.Arabic -> "ترابي"
+        }
+
+        Res.string.block_style -> when (language) {
+            AppLanguage.English -> "Block Style"
+            AppLanguage.Turkish -> "Blok Stili"
+            AppLanguage.Spanish -> "Estilo de bloque"
+            AppLanguage.French -> "Style des blocs"
+            AppLanguage.German -> "Blockstil"
+            AppLanguage.Russian -> "Стиль блоков"
+            AppLanguage.Arabic -> "نمط الكتل"
+        }
+
+        Res.string.block_style_flat -> when (language) {
+            AppLanguage.English -> "Flat"
+            AppLanguage.Turkish -> "Düz"
+            AppLanguage.Spanish -> "Plano"
+            AppLanguage.French -> "Plat"
+            AppLanguage.German -> "Flach"
+            AppLanguage.Russian -> "Плоский"
+            AppLanguage.Arabic -> "مسطّح"
+        }
+
+        Res.string.block_style_raised -> when (language) {
+            AppLanguage.English -> "Raised 3D"
+            AppLanguage.Turkish -> "Yükseltilmiş 3D"
+            AppLanguage.Spanish -> "3D elevado"
+            AppLanguage.French -> "3D surélevé"
+            AppLanguage.German -> "Erhabenes 3D"
+            AppLanguage.Russian -> "Объёмный 3D"
+            AppLanguage.Arabic -> "ثلاثي الأبعاد المرتفع"
+        }
+
+        Res.string.block_style_liquid_glass -> when (language) {
+            AppLanguage.English -> "Liquid Glass"
+            AppLanguage.Turkish -> "Liquid Glass"
+            AppLanguage.Spanish -> "Vidrio líquido"
+            AppLanguage.French -> "Verre liquide"
+            AppLanguage.German -> "Liquid Glass"
+            AppLanguage.Russian -> "Жидкое стекло"
+            AppLanguage.Arabic -> "زجاج سائل"
+        }
+
+        Res.string.block_style_neon -> when (language) {
+            AppLanguage.English -> "Neon"
+            AppLanguage.Turkish -> "Neon"
+            AppLanguage.Spanish -> "Neón"
+            AppLanguage.French -> "Néon"
+            AppLanguage.German -> "Neon"
+            AppLanguage.Russian -> "Неон"
+            AppLanguage.Arabic -> "نيون"
+        }
+
+        Res.string.neon_pulse_speed -> when (language) {
+            AppLanguage.English -> "Neon Pulse Speed"
+            AppLanguage.Turkish -> "Neon Nabız Hızı"
+            AppLanguage.Spanish -> "Velocidad del pulso neón"
+            AppLanguage.French -> "Vitesse du pulse néon"
+            AppLanguage.German -> "Neon-Pulsgeschwindigkeit"
+            AppLanguage.Russian -> "Скорость неонового пульса"
+            AppLanguage.Arabic -> "سرعة نبض النيون"
+        }
+
+        Res.string.neon_pulse_speed_slow -> when (language) {
+            AppLanguage.English -> "Slow"
+            AppLanguage.Turkish -> "Yavaş"
+            AppLanguage.Spanish -> "Lento"
+            AppLanguage.French -> "Lent"
+            AppLanguage.German -> "Langsam"
+            AppLanguage.Russian -> "Медленно"
+            AppLanguage.Arabic -> "بطيء"
+        }
+
+        Res.string.neon_pulse_speed_normal -> when (language) {
+            AppLanguage.English -> "Normal"
+            AppLanguage.Turkish -> "Normal"
+            AppLanguage.Spanish -> "Normal"
+            AppLanguage.French -> "Normal"
+            AppLanguage.German -> "Normal"
+            AppLanguage.Russian -> "Нормально"
+            AppLanguage.Arabic -> "عادي"
+        }
+
+        Res.string.neon_pulse_speed_fast -> when (language) {
+            AppLanguage.English -> "Fast"
+            AppLanguage.Turkish -> "Hızlı"
+            AppLanguage.Spanish -> "Rápido"
+            AppLanguage.French -> "Rapide"
+            AppLanguage.German -> "Schnell"
+            AppLanguage.Russian -> "Быстро"
+            AppLanguage.Arabic -> "سريع"
+        }
+
+        Res.string.drag_finger_offset -> when (language) {
+            AppLanguage.English -> "Finger Offset"
+            AppLanguage.Turkish -> "Parmak Ofseti"
+            AppLanguage.Spanish -> "Desplazamiento del dedo"
+            AppLanguage.French -> "Décalage du doigt"
+            AppLanguage.German -> "Fingerabstand"
+            AppLanguage.Russian -> "Смещение пальца"
+            AppLanguage.Arabic -> "إزاحة الإصبع"
+        }
+
+        Res.string.drag_finger_offset_none -> when (language) {
+            AppLanguage.English -> "None"
+            AppLanguage.Turkish -> "Yok"
+            AppLanguage.Spanish -> "Ninguno"
+            AppLanguage.French -> "Aucun"
+            AppLanguage.German -> "Keiner"
+            AppLanguage.Russian -> "Нет"
+            AppLanguage.Arabic -> "بدون"
+        }
+
+        Res.string.drag_finger_offset_low -> when (language) {
+            AppLanguage.English -> "Low"
+            AppLanguage.Turkish -> "Az"
+            AppLanguage.Spanish -> "Bajo"
+            AppLanguage.French -> "Faible"
+            AppLanguage.German -> "Wenig"
+            AppLanguage.Russian -> "Мало"
+            AppLanguage.Arabic -> "قليل"
+        }
+
+        Res.string.drag_finger_offset_medium -> when (language) {
+            AppLanguage.English -> "Medium"
+            AppLanguage.Turkish -> "Orta"
+            AppLanguage.Spanish -> "Medio"
+            AppLanguage.French -> "Moyen"
+            AppLanguage.German -> "Mittel"
+            AppLanguage.Russian -> "Средне"
+            AppLanguage.Arabic -> "متوسط"
+        }
+
+        Res.string.drag_finger_offset_high -> when (language) {
+            AppLanguage.English -> "High"
+            AppLanguage.Turkish -> "Çok"
+            AppLanguage.Spanish -> "Alto"
+            AppLanguage.French -> "Élevé"
+            AppLanguage.German -> "Stark"
+            AppLanguage.Russian -> "Сильно"
+            AppLanguage.Arabic -> "كبير"
+        }
+
+        Res.string.invalid_placement_feedback_mode -> when (language) {
+            AppLanguage.English -> "Error Messages"
+            AppLanguage.Turkish -> "Hata Mesajları"
+            AppLanguage.Spanish -> "Mensajes de error"
+            AppLanguage.French -> "Messages d’erreur"
+            AppLanguage.German -> "Fehlermeldungen"
+            AppLanguage.Russian -> "Сообщения об ошибках"
+            AppLanguage.Arabic -> "رسائل الخطأ"
+        }
+
+        Res.string.invalid_placement_feedback_mode_while_dragging -> when (language) {
+            AppLanguage.English -> "While dragging"
+            AppLanguage.Turkish -> "Parça hareket halindeyken"
+            AppLanguage.Spanish -> "Mientras arrastras"
+            AppLanguage.French -> "Pendant le glisser"
+            AppLanguage.German -> "Beim Ziehen"
+            AppLanguage.Russian -> "Во время перетаскивания"
+            AppLanguage.Arabic -> "أثناء السحب"
+        }
+
+        Res.string.invalid_placement_feedback_mode_on_drop -> when (language) {
+            AppLanguage.English -> "On drop"
+            AppLanguage.Turkish -> "Parçayı bıraktığında"
+            AppLanguage.Spanish -> "Al soltar"
+            AppLanguage.French -> "Au relâchement"
+            AppLanguage.German -> "Beim Ablegen"
+            AppLanguage.Russian -> "При отпускании"
+            AppLanguage.Arabic -> "عند الإفلات"
+        }
+
+        Res.string.language_english -> when (language) {
+            AppLanguage.English -> "English"
+            AppLanguage.Turkish -> "İngilizce"
+            AppLanguage.Spanish -> "Inglés"
+            AppLanguage.French -> "Anglais"
+            AppLanguage.German -> "Englisch"
+            AppLanguage.Russian -> "Английский"
+            AppLanguage.Arabic -> "الإنجليزية"
+        }
+
+        Res.string.language_turkish -> when (language) {
+            AppLanguage.English -> "Turkish"
+            AppLanguage.Turkish -> "Türkçe"
+            AppLanguage.Spanish -> "Turco"
+            AppLanguage.French -> "Turc"
+            AppLanguage.German -> "Türkisch"
+            AppLanguage.Russian -> "Турецкий"
+            AppLanguage.Arabic -> "التركية"
+        }
+
+        Res.string.language_spanish -> when (language) {
+            AppLanguage.English -> "Spanish"
+            AppLanguage.Turkish -> "İspanyolca"
+            AppLanguage.Spanish -> "Español"
+            AppLanguage.French -> "Espagnol"
+            AppLanguage.German -> "Spanisch"
+            AppLanguage.Russian -> "Испанский"
+            AppLanguage.Arabic -> "الإسبانية"
+        }
+
+        Res.string.language_french -> when (language) {
+            AppLanguage.English -> "French"
+            AppLanguage.Turkish -> "Fransızca"
+            AppLanguage.Spanish -> "Francés"
+            AppLanguage.French -> "Français"
+            AppLanguage.German -> "Französisch"
+            AppLanguage.Russian -> "Французский"
+            AppLanguage.Arabic -> "الفرنسية"
+        }
+
+        Res.string.language_german -> when (language) {
+            AppLanguage.English -> "German"
+            AppLanguage.Turkish -> "Almanca"
+            AppLanguage.Spanish -> "Alemán"
+            AppLanguage.French -> "Allemand"
+            AppLanguage.German -> "Deutsch"
+            AppLanguage.Russian -> "Немецкий"
+            AppLanguage.Arabic -> "الألمانية"
+        }
+
+        Res.string.language_russian -> when (language) {
+            AppLanguage.English -> "Russian"
+            AppLanguage.Turkish -> "Rusça"
+            AppLanguage.Spanish -> "Ruso"
+            AppLanguage.French -> "Russe"
+            AppLanguage.German -> "Russisch"
+            AppLanguage.Russian -> "Русский"
+            AppLanguage.Arabic -> "الروسية"
+        }
+
+        Res.string.language_arabic -> when (language) {
+            AppLanguage.English -> "Arabic"
+            AppLanguage.Turkish -> "Arapça"
+            AppLanguage.Spanish -> "Árabe"
+            AppLanguage.French -> "Arabe"
+            AppLanguage.German -> "Arabisch"
+            AppLanguage.Russian -> "Арабский"
+            AppLanguage.Arabic -> "العربية"
         }
 
         Res.string.difficulty_easy -> when (language) {
@@ -379,7 +742,7 @@ internal fun localizedGetString(language: AppLanguage, resource: StringResource,
             AppLanguage.Arabic -> "يجب أن يحتوي العمود المكتمل على ${intArg(0)} ألوان مختلفة على الأقل."
         }
 
-        Res.string.rule_color_limit -> when (language) {
+        Res.string.rule_color_limit_row -> when (language) {
             AppLanguage.English -> "A row can’t contain more than ${intArg(0)} blocks of the same color."
             AppLanguage.Turkish -> "Bir satırda aynı renkten ${intArg(0)} adetten fazla blok olamaz."
             AppLanguage.Spanish -> "Una fila no puede contener más de ${intArg(0)} bloques del mismo color."
@@ -692,13 +1055,13 @@ internal fun localizedGetString(language: AppLanguage, resource: StringResource,
         Res.string.scores_empty -> "-"
 
         Res.string.selected_mode_best_score -> when (language) {
-            AppLanguage.English -> "Best for this mode: ${intArg(0)}"
-            AppLanguage.Turkish -> "Bu mod için en iyi skor: ${intArg(0)}"
-            AppLanguage.Spanish -> "Mejor resultado para este modo: ${intArg(0)}"
-            AppLanguage.French -> "Meilleur score pour ce mode : ${intArg(0)}"
-            AppLanguage.German -> "Bester Wert für diesen Modus: ${intArg(0)}"
-            AppLanguage.Russian -> "Лучший результат для этого режима: ${intArg(0)}"
-            AppLanguage.Arabic -> "أفضل نتيجة لهذا الوضع: ${intArg(0)}"
+            AppLanguage.English -> "Best for this mode: ${textArg(0)}"
+            AppLanguage.Turkish -> "Bu mod için en iyi skor: ${textArg(0)}"
+            AppLanguage.Spanish -> "Mejor resultado para este modo: ${textArg(0)}"
+            AppLanguage.French -> "Meilleur score pour ce mode : ${textArg(0)}"
+            AppLanguage.German -> "Bester Wert für diesen Modus: ${textArg(0)}"
+            AppLanguage.Russian -> "Лучший результат для этого режима: ${textArg(0)}"
+            AppLanguage.Arabic -> "أفضل نتيجة لهذا الوضع: ${textArg(0)}"
         }
 
         else -> error("Unsupported localized string resource: $resource")

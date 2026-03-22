@@ -11,10 +11,13 @@ import com.ugurbuga.blockwise.blocklogic.domain.GridSize
 import com.ugurbuga.blockwise.blocklogic.domain.Piece
 import com.ugurbuga.blockwise.blocklogic.domain.Shapes
 import com.ugurbuga.blockwise.blocklogic.domain.resolveGameConfig
+import com.ugurbuga.blockwise.blocklogic.domain.resolveMoveLimit
 import com.ugurbuga.blockwise.blocklogic.domain.supportedDifficulties
 import com.ugurbuga.blockwise.blocklogic.ui.formatBestScore
 import com.ugurbuga.blockwise.blocklogic.ui.buildGridGeometry
 import com.ugurbuga.blockwise.blocklogic.ui.cellExtentPx
+import com.ugurbuga.blockwise.blocklogic.ui.dragPreviewBorderColor
+import com.ugurbuga.blockwise.blocklogic.ui.dragPreviewBorderWidth
 import com.ugurbuga.blockwise.blocklogic.ui.GridAxisGeometry
 import com.ugurbuga.blockwise.blocklogic.ui.normalizeDragStartOffsetInContent
 import com.ugurbuga.blockwise.blocklogic.ui.previewCellsForOrigins
@@ -26,8 +29,18 @@ import com.ugurbuga.blockwise.blocklogic.ui.resolveDraggedOriginAxis
 import com.ugurbuga.blockwise.blocklogic.ui.resolveNearestCellAxis
 import com.ugurbuga.blockwise.blocklogic.ui.resolvePointerCellAxis
 import com.ugurbuga.blockwise.blocklogic.ui.resolveSnappedOriginAxis
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.IntSize
+import blockwise.composeapp.generated.resources.Res
+import blockwise.composeapp.generated.resources.drag_finger_offset_high
+import blockwise.composeapp.generated.resources.drag_finger_offset_low
+import blockwise.composeapp.generated.resources.invalid_placement_feedback_mode_on_drop
+import blockwise.composeapp.generated.resources.invalid_placement_feedback_mode_while_dragging
+import blockwise.composeapp.generated.resources.language_english
+import blockwise.composeapp.generated.resources.language_russian
+import blockwise.composeapp.generated.resources.neon_pulse_speed
+import blockwise.composeapp.generated.resources.neon_pulse_speed_fast
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -656,17 +669,33 @@ class ComposeAppCommonTest {
         assertEquals(6, hard.rules.maxSameColorPerCol)
         assertEquals(3, hard.rules.maxAdjacentSameColor)
         assertEquals(3, hard.rules.minDistinctColorsInFullLine)
-        assertEquals(36, hard.rules.moveLimit)
+        assertEquals(46, hard.rules.moveLimit)
         assertEquals(0.14f, hard.difficultyConfig.preFilledRatio)
 
         assertEquals(7, veryHard.rules.maxSameColorPerRow)
         assertEquals(7, veryHard.rules.maxSameColorPerCol)
         assertEquals(4, veryHard.rules.maxAdjacentSameColor)
         assertEquals(4, veryHard.rules.minDistinctColorsInFullLine)
-        assertEquals(32, veryHard.rules.moveLimit)
+        assertEquals(58, veryHard.rules.moveLimit)
         assertEquals(0.15f, veryHard.difficultyConfig.preFilledRatio)
         assertEquals(0.02f, veryHard.difficultyConfig.lockedCellsRatio)
         assertEquals(4, veryHard.maxShapeDimension)
+    }
+
+    @Test
+    fun `move limits stay disabled on easy normal and scale up with larger hard boards`() {
+        assertEquals(null, resolveMoveLimit(gridSize = 10, difficulty = Difficulty.Easy))
+        assertEquals(null, resolveMoveLimit(gridSize = 10, difficulty = Difficulty.Normal))
+
+        assertEquals(38, resolveMoveLimit(gridSize = 8, difficulty = Difficulty.Hard))
+        assertEquals(46, resolveMoveLimit(gridSize = 10, difficulty = Difficulty.Hard))
+        assertEquals(54, resolveMoveLimit(gridSize = 12, difficulty = Difficulty.Hard))
+        assertEquals(62, resolveMoveLimit(gridSize = 14, difficulty = Difficulty.Hard))
+
+        assertEquals(34, resolveMoveLimit(gridSize = 8, difficulty = Difficulty.VeryHard))
+        assertEquals(42, resolveMoveLimit(gridSize = 10, difficulty = Difficulty.VeryHard))
+        assertEquals(50, resolveMoveLimit(gridSize = 12, difficulty = Difficulty.VeryHard))
+        assertEquals(58, resolveMoveLimit(gridSize = 14, difficulty = Difficulty.VeryHard))
     }
 
     @Test
@@ -944,5 +973,87 @@ class ComposeAppCommonTest {
                 ),
             )
         )
+    }
+
+    @Test
+    fun `neon pulse speeds expose stable persisted values and timing order`() {
+        assertEquals(listOf(NeonPulseSpeed.Slow, NeonPulseSpeed.Normal, NeonPulseSpeed.Fast), SelectableNeonPulseSpeeds)
+        assertEquals(NeonPulseSpeed.Slow, NeonPulseSpeed.fromStorageValue("slow"))
+        assertEquals(NeonPulseSpeed.Normal, NeonPulseSpeed.fromStorageValue("normal"))
+        assertEquals(NeonPulseSpeed.Fast, NeonPulseSpeed.fromStorageValue("fast"))
+        assertEquals(null, NeonPulseSpeed.fromStorageValue("turbo"))
+        assertTrue(NeonPulseSpeed.Slow.durationMillis > NeonPulseSpeed.Normal.durationMillis)
+        assertTrue(NeonPulseSpeed.Normal.durationMillis > NeonPulseSpeed.Fast.durationMillis)
+    }
+
+    @Test
+    fun `drag finger offset levels expose stable persisted values and increasing offsets`() {
+        assertEquals(
+            listOf(
+                DragFingerOffsetLevel.None,
+                DragFingerOffsetLevel.Low,
+                DragFingerOffsetLevel.Medium,
+                DragFingerOffsetLevel.High,
+            ),
+            SelectableDragFingerOffsetLevels,
+        )
+        assertEquals(DragFingerOffsetLevel.None, DragFingerOffsetLevel.fromStorageValue("none"))
+        assertEquals(DragFingerOffsetLevel.Low, DragFingerOffsetLevel.fromStorageValue("low"))
+        assertEquals(DragFingerOffsetLevel.Medium, DragFingerOffsetLevel.fromStorageValue("medium"))
+        assertEquals(DragFingerOffsetLevel.High, DragFingerOffsetLevel.fromStorageValue("high"))
+        assertEquals(null, DragFingerOffsetLevel.fromStorageValue("ultra"))
+        assertTrue(DragFingerOffsetLevel.Low.offsetPx > DragFingerOffsetLevel.None.offsetPx)
+        assertTrue(DragFingerOffsetLevel.Medium.offsetPx > DragFingerOffsetLevel.Low.offsetPx)
+        assertTrue(DragFingerOffsetLevel.High.offsetPx > DragFingerOffsetLevel.Medium.offsetPx)
+    }
+
+    @Test
+    fun `invalid placement feedback modes expose stable persisted values`() {
+        assertEquals(
+            listOf(
+                InvalidPlacementFeedbackMode.WhileDragging,
+                InvalidPlacementFeedbackMode.OnDrop,
+            ),
+            SelectableInvalidPlacementFeedbackModes,
+        )
+        assertEquals(
+            InvalidPlacementFeedbackMode.WhileDragging,
+            InvalidPlacementFeedbackMode.fromStorageValue("while_dragging"),
+        )
+        assertEquals(
+            InvalidPlacementFeedbackMode.OnDrop,
+            InvalidPlacementFeedbackMode.fromStorageValue("on_drop"),
+        )
+        assertEquals(null, InvalidPlacementFeedbackMode.fromStorageValue("never"))
+    }
+
+    @Test
+    fun `localized resources include language and gameplay settings labels`() {
+        assertEquals("English", localizedGetString(AppLanguage.English, Res.string.language_english))
+        assertEquals("Русский", localizedGetString(AppLanguage.Russian, Res.string.language_russian))
+        assertEquals("Neon Pulse Speed", localizedGetString(AppLanguage.English, Res.string.neon_pulse_speed))
+        assertEquals("Быстро", localizedGetString(AppLanguage.Russian, Res.string.neon_pulse_speed_fast))
+        assertEquals("Low", localizedGetString(AppLanguage.English, Res.string.drag_finger_offset_low))
+        assertEquals("Çok", localizedGetString(AppLanguage.Turkish, Res.string.drag_finger_offset_high))
+        assertEquals(
+            "While dragging",
+            localizedGetString(AppLanguage.English, Res.string.invalid_placement_feedback_mode_while_dragging),
+        )
+        assertEquals(
+            "Al soltar",
+            localizedGetString(AppLanguage.Spanish, Res.string.invalid_placement_feedback_mode_on_drop),
+        )
+    }
+
+    @Test
+    fun `invalid drag preview border is stronger than valid drag preview border`() {
+        val pieceColor = Color(0xFF24C4FF)
+        val validBorder = dragPreviewBorderColor(pieceColor, invalidPlacement = false)
+        val invalidBorder = dragPreviewBorderColor(pieceColor, invalidPlacement = true)
+
+        assertTrue(dragPreviewBorderWidth(true).value > dragPreviewBorderWidth(false).value)
+        assertTrue(invalidBorder.red >= validBorder.red)
+        assertTrue(invalidBorder.green >= validBorder.green)
+        assertTrue(invalidBorder.blue >= validBorder.blue)
     }
 }

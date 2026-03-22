@@ -10,6 +10,32 @@
     <string name="theme_system">Система</string>
     <string name="theme_light">Светлая</string>
     <string name="theme_dark">Тёмная</string>
+    <string name="block_color_palette">Палитра блоков</string>
+    <string name="block_palette_classic">Классика</string>
+    <string name="block_palette_candy">Конфетная</string>
+    <string name="block_palette_neon">Неон</string>
+    <string name="block_palette_earth">Земля</string>
+    <string name="color_palette">Цветовая палитра</string>
+    <string name="color_palette_classic">Классика</string>
+    <string name="color_palette_aurora">Аврора</string>
+    <string name="color_palette_sunset">Закат</string>
+    <string name="block_style">Стиль блоков</string>
+    <string name="block_style_flat">Плоский</string>
+    <string name="block_style_raised">Объёмный 3D</string>
+    <string name="block_style_liquid_glass">Жидкое стекло</string>
+    <string name="block_style_neon">Неон</string>
+    <string name="neon_pulse_speed">Скорость неонового пульса</string>
+    <string name="neon_pulse_speed_slow">Медленно</string>
+    <string name="neon_pulse_speed_normal">Нормально</string>
+    <string name="neon_pulse_speed_fast">Быстро</string>
+    <string name="drag_finger_offset">Смещение пальца</string>
+    <string name="drag_finger_offset_none">Нет</string>
+    <string name="drag_finger_offset_low">Мало</string>
+    <string name="drag_finger_offset_medium">Средне</string>
+    <string name="drag_finger_offset_high">Сильно</string>
+    <string name="invalid_placement_feedback_mode">Сообщения об ошибках</string>
+    <string name="invalid_placement_feedback_mode_while_dragging">Во время перетаскивания</string>
+    <string name="invalid_placement_feedback_mode_on_drop">При отпускании</string>
     <string name="language_english">Английский</string>
     <string name="language_turkish">Турецкий</string>
     <string name="language_spanish">Испанский</string>
@@ -37,7 +63,7 @@
     <string name="invalid_placement_adjacent_col">В столбце не может быть больше %1$d соседних блоков одного цвета.</string>
     <string name="invalid_placement_distinct_row">Полная строка должна содержать как минимум %1$d разных цветов.</string>
     <string name="invalid_placement_distinct_col">Полный столбец должен содержать как минимум %1$d разных цветов.</string>
-    <string name="rule_color_limit">Строка не может содержать больше %1$d блоков одного цвета.</string>
+    <string name="rule_color_limit_row">Строка не может содержать больше %1$d блоков одного цвета.</string>
     <string name="rule_color_limit_col">Столбец не может содержать больше %1$d блоков одного цвета.</string>
     <string name="game_over">Игра окончена</string>
     <string name="no_moves_left">Больше нет допустимых ходов.</string>
@@ -71,6 +97,6 @@
     <string name="scores_title">Рекорды</string>
     <string name="scores_best_for_mode">Лучший счёт</string>
     <string name="scores_empty">-</string>
-    <string name="selected_mode_best_score">Лучший результат для этого режима: %1$d</string>
+    <string name="selected_mode_best_score">Лучший результат для этого режима: %1$s</string>
 </resources>
 

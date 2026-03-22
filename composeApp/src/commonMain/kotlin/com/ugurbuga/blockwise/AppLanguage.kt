@@ -32,7 +32,7 @@ internal enum class AppLanguage(
     }
 }
 
-internal val SelectableAppLanguages = AppLanguage.entries
+internal val SelectableAppLanguages = AppLanguage.entries.filter { !it.isRtl }
 
 internal expect object PlatformAppSettings {
     fun getString(key: String): String?

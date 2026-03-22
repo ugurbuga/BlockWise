@@ -10,6 +10,32 @@
     <string name="theme_system">Système</string>
     <string name="theme_light">Clair</string>
     <string name="theme_dark">Sombre</string>
+    <string name="block_color_palette">Palette de couleurs des blocs</string>
+    <string name="block_palette_classic">Classique</string>
+    <string name="block_palette_candy">Bonbon</string>
+    <string name="block_palette_neon">Néon</string>
+    <string name="block_palette_earth">Terre</string>
+    <string name="color_palette">Palette de couleurs</string>
+    <string name="color_palette_classic">Classique</string>
+    <string name="color_palette_aurora">Aurore</string>
+    <string name="color_palette_sunset">Coucher de soleil</string>
+    <string name="block_style">Style des blocs</string>
+    <string name="block_style_flat">Plat</string>
+    <string name="block_style_raised">3D surélevé</string>
+    <string name="block_style_liquid_glass">Verre liquide</string>
+    <string name="block_style_neon">Néon</string>
+    <string name="neon_pulse_speed">Vitesse du pulse néon</string>
+    <string name="neon_pulse_speed_slow">Lent</string>
+    <string name="neon_pulse_speed_normal">Normal</string>
+    <string name="neon_pulse_speed_fast">Rapide</string>
+    <string name="drag_finger_offset">Décalage du doigt</string>
+    <string name="drag_finger_offset_none">Aucun</string>
+    <string name="drag_finger_offset_low">Faible</string>
+    <string name="drag_finger_offset_medium">Moyen</string>
+    <string name="drag_finger_offset_high">Élevé</string>
+    <string name="invalid_placement_feedback_mode">Messages d’erreur</string>
+    <string name="invalid_placement_feedback_mode_while_dragging">Pendant le glisser</string>
+    <string name="invalid_placement_feedback_mode_on_drop">Au relâchement</string>
     <string name="language_english">Anglais</string>
     <string name="language_turkish">Turc</string>
     <string name="language_spanish">Espagnol</string>
@@ -37,7 +63,7 @@
     <string name="invalid_placement_adjacent_col">Une colonne ne peut pas avoir plus de %1$d blocs adjacents de la même couleur.</string>
     <string name="invalid_placement_distinct_row">Une ligne complète doit contenir au moins %1$d couleurs différentes.</string>
     <string name="invalid_placement_distinct_col">Une colonne complète doit contenir au moins %1$d couleurs différentes.</string>
-    <string name="rule_color_limit">Une ligne ne peut pas contenir plus de %1$d blocs de la même couleur.</string>
+    <string name="rule_color_limit_row">Une ligne ne peut pas contenir plus de %1$d blocs de la même couleur.</string>
     <string name="rule_color_limit_col">Une colonne ne peut pas contenir plus de %1$d blocs de la même couleur.</string>
     <string name="game_over">Partie terminée</string>
     <string name="no_moves_left">Il n’y a plus de coups valides.</string>
@@ -71,6 +97,6 @@
     <string name="scores_title">Scores</string>
     <string name="scores_best_for_mode">Meilleur score</string>
     <string name="scores_empty">-</string>
-    <string name="selected_mode_best_score">Meilleur score pour ce mode : %1$d</string>
+    <string name="selected_mode_best_score">Meilleur score pour ce mode : %1$s</string>
 </resources>
 

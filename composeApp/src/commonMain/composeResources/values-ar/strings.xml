@@ -10,6 +10,28 @@
     <string name="theme_system">النظام</string>
     <string name="theme_light">فاتح</string>
     <string name="theme_dark">داكن</string>
+    <string name="block_color_palette">لوحة ألوان الكتل</string>
+    <string name="block_palette_classic">كلاسيكي</string>
+    <string name="block_palette_candy">حلويات</string>
+    <string name="block_palette_neon">نيون</string>
+    <string name="block_palette_earth">ترابي</string>
+    <string name="color_palette">لوحة الألوان</string>
+    <string name="color_palette_classic">كلاسيكي</string>
+    <string name="color_palette_aurora">أورورا</string>
+    <string name="color_palette_sunset">غروب</string>
+    <string name="block_style">نمط الكتل</string>
+    <string name="block_style_flat">مسطّح</string>
+    <string name="block_style_raised">ثلاثي الأبعاد المرتفع</string>
+    <string name="block_style_liquid_glass">زجاج سائل</string>
+    <string name="block_style_neon">نيون</string>
+    <string name="drag_finger_offset">إزاحة الإصبع</string>
+    <string name="drag_finger_offset_none">بدون</string>
+    <string name="drag_finger_offset_low">قليل</string>
+    <string name="drag_finger_offset_medium">متوسط</string>
+    <string name="drag_finger_offset_high">كبير</string>
+    <string name="invalid_placement_feedback_mode">رسائل الخطأ</string>
+    <string name="invalid_placement_feedback_mode_while_dragging">أثناء السحب</string>
+    <string name="invalid_placement_feedback_mode_on_drop">عند الإفلات</string>
     <string name="language_english">الإنجليزية</string>
     <string name="language_turkish">التركية</string>
     <string name="language_spanish">الإسبانية</string>
@@ -37,7 +59,7 @@
     <string name="invalid_placement_adjacent_col">لا يمكن أن يحتوي العمود على أكثر من %1$d كتل متجاورة من اللون نفسه.</string>
     <string name="invalid_placement_distinct_row">يجب أن يحتوي الصف المكتمل على %1$d ألوان مختلفة على الأقل.</string>
     <string name="invalid_placement_distinct_col">يجب أن يحتوي العمود المكتمل على %1$d ألوان مختلفة على الأقل.</string>
-    <string name="rule_color_limit">لا يمكن أن يحتوي الصف على أكثر من %1$d كتل من اللون نفسه.</string>
+    <string name="rule_color_limit_row">لا يمكن أن يحتوي الصف على أكثر من %1$d كتل من اللون نفسه.</string>
     <string name="rule_color_limit_col">لا يمكن أن يحتوي العمود على أكثر من %1$d كتل من اللون نفسه.</string>
     <string name="game_over">انتهت اللعبة</string>
     <string name="no_moves_left">لا توجد حركات صالحة متبقية.</string>
@@ -71,6 +93,6 @@
     <string name="scores_title">النتائج</string>
     <string name="scores_best_for_mode">أفضل نتيجة</string>
     <string name="scores_empty">-</string>
-    <string name="selected_mode_best_score">أفضل نتيجة لهذا الوضع: %1$d</string>
+    <string name="selected_mode_best_score">أفضل نتيجة لهذا الوضع: %1$s</string>
 </resources>
 

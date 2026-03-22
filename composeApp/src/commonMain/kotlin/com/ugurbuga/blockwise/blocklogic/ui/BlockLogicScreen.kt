@@ -1,7 +1,7 @@
 package com.ugurbuga.blockwise.blocklogic.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -11,20 +11,16 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -33,8 +29,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,20 +45,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.zIndex
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ugurbuga.blockwise.BlockVisualStyle
+import com.ugurbuga.blockwise.InvalidPlacementFeedbackMode
 import com.ugurbuga.blockwise.LocalAppLanguage
+import com.ugurbuga.blockwise.LocalBlockColorPalette
+import com.ugurbuga.blockwise.LocalBlockVisualStyle
+import com.ugurbuga.blockwise.LocalDragFingerOffsetLevel
+import com.ugurbuga.blockwise.LocalInvalidPlacementFeedbackMode
+import com.ugurbuga.blockwise.LocalPaletteIsDarkTheme
 import com.ugurbuga.blockwise.localizedGetString
+import com.ugurbuga.blockwise.localizedStringResource as stringResource
 import com.ugurbuga.blockwise.blocklogic.domain.BlockColor
 import com.ugurbuga.blockwise.blocklogic.domain.CellCoord
 import com.ugurbuga.blockwise.blocklogic.domain.CellOffset
@@ -75,7 +78,7 @@ import com.ugurbuga.blockwise.blocklogic.domain.RuleViolation
 import com.ugurbuga.blockwise.blocklogic.domain.Piece
 import com.ugurbuga.blockwise.blocklogic.domain.Shapes
 import com.ugurbuga.blockwise.blocklogic.domain.resolveGameConfig
-import com.ugurbuga.blockwise.localizedStringResource as stringResource
+import com.ugurbuga.blockwise.ui.theme.BlockWisePalette
 import com.ugurbuga.blockwise.ui.theme.BlockWiseTheme
 import com.ugurbuga.blockwise.ui.theme.toPaletteColor
 import blockwise.composeapp.generated.resources.Res
@@ -92,10 +95,12 @@ import blockwise.composeapp.generated.resources.menu
 import blockwise.composeapp.generated.resources.moves_remaining
 import blockwise.composeapp.generated.resources.new_game
 import blockwise.composeapp.generated.resources.ok
-import blockwise.composeapp.generated.resources.rule_color_limit
+import blockwise.composeapp.generated.resources.rule_color_limit_row
 import blockwise.composeapp.generated.resources.rule_color_limit_col
 import blockwise.composeapp.generated.resources.score
 import blockwise.composeapp.generated.resources.select_piece
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 import kotlin.math.abs
 import kotlin.math.floor
@@ -357,6 +362,28 @@ private fun Offset.debugString(): String = "(${x.roundToInt()},${y.roundToInt()}
 
 private const val ENABLE_DRAG_DEBUG_LOGS = true
 
+private fun adjustedDragFingerInRoot(rawFingerInRoot: Offset, offsetPx: Float): Offset {
+    return rawFingerInRoot.copy(y = rawFingerInRoot.y - offsetPx)
+}
+
+private fun placementFailureMessage(language: com.ugurbuga.blockwise.AppLanguage, failure: PlacementFailure): String {
+    return when (failure) {
+        PlacementFailure.NoPieceSelected -> localizedGetString(language, Res.string.invalid_placement)
+        PlacementFailure.OutOfBounds -> localizedGetString(language, Res.string.invalid_placement_out_of_bounds)
+        PlacementFailure.Overlap -> localizedGetString(language, Res.string.invalid_placement_overlap)
+        is PlacementFailure.Rule -> {
+            when (val v = failure.violation) {
+                is RuleViolation.TooManySameColorInRow -> localizedGetString(language, Res.string.rule_color_limit_row, v.limit)
+                is RuleViolation.TooManySameColorInCol -> localizedGetString(language, Res.string.rule_color_limit_col, v.limit)
+                is RuleViolation.TooManyAdjacentSameColorInRow -> localizedGetString(language, Res.string.invalid_placement_adjacent_row, v.limit)
+                is RuleViolation.TooManyAdjacentSameColorInCol -> localizedGetString(language, Res.string.invalid_placement_adjacent_col, v.limit)
+                is RuleViolation.NotEnoughDistinctColorsInRow -> localizedGetString(language, Res.string.invalid_placement_distinct_row, v.required)
+                is RuleViolation.NotEnoughDistinctColorsInCol -> localizedGetString(language, Res.string.invalid_placement_distinct_col, v.required)
+            }
+        }
+    }
+}
+
 private fun logDrag(message: String) {
     if (ENABLE_DRAG_DEBUG_LOGS) {
         println("BW_DRAG $message")
@@ -453,34 +480,37 @@ fun BlockLogicScreen(
     }
     val state by vm.uiState.collectAsState()
     val appLanguage = LocalAppLanguage.current
+    val invalidPlacementFeedbackMode = LocalInvalidPlacementFeedbackMode.current
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
+    var snackbarJob by remember { mutableStateOf<Job?>(null) }
+    var suppressNextDragPlacementFailure by remember { mutableStateOf(false) }
     var hasRecordedGameOverScore by remember(sessionKey) { mutableStateOf(false) }
 
     fun recordCurrentScore() {
         onRecordScore(state.gridSize, state.difficulty, state.score)
     }
 
+    fun dismissPlacementMessage() {
+        snackbarJob?.cancel()
+        snackbarJob = null
+        snackbarHostState.currentSnackbarData?.dismiss()
+    }
+
     LaunchedEffect(vm, appLanguage) {
         vm.viewEvent.collect { event ->
             when (event) {
                 is BlockLogicViewEvent.PlacementFailed -> {
-                    val msg = when (val failure = event.failure) {
-                        PlacementFailure.NoPieceSelected -> localizedGetString(appLanguage, Res.string.invalid_placement)
-                        PlacementFailure.OutOfBounds -> localizedGetString(appLanguage, Res.string.invalid_placement_out_of_bounds)
-                        PlacementFailure.Overlap -> localizedGetString(appLanguage, Res.string.invalid_placement_overlap)
-                        is PlacementFailure.Rule -> {
-                            when (val v = failure.violation) {
-                                is RuleViolation.TooManySameColorInRow -> localizedGetString(appLanguage, Res.string.rule_color_limit, v.limit)
-                                is RuleViolation.TooManySameColorInCol -> localizedGetString(appLanguage, Res.string.rule_color_limit_col, v.limit)
-                                is RuleViolation.TooManyAdjacentSameColorInRow -> localizedGetString(appLanguage, Res.string.invalid_placement_adjacent_row, v.limit)
-                                is RuleViolation.TooManyAdjacentSameColorInCol -> localizedGetString(appLanguage, Res.string.invalid_placement_adjacent_col, v.limit)
-                                is RuleViolation.NotEnoughDistinctColorsInRow -> localizedGetString(appLanguage, Res.string.invalid_placement_distinct_row, v.required)
-                                is RuleViolation.NotEnoughDistinctColorsInCol -> localizedGetString(appLanguage, Res.string.invalid_placement_distinct_col, v.required)
-                            }
+                    if (suppressNextDragPlacementFailure) {
+                        suppressNextDragPlacementFailure = false
+                    } else {
+                        val msg = placementFailureMessage(appLanguage, event.failure)
+                        dismissPlacementMessage()
+                        snackbarJob = snackbarScope.launch {
+                            snackbarHostState.showSnackbar(msg)
                         }
                     }
-                    snackbarHostState.showSnackbar(msg)
                 }
                 BlockLogicViewEvent.GameOver -> Unit
             }
@@ -501,6 +531,8 @@ fun BlockLogicScreen(
         state = state,
         snackbarHostState = snackbarHostState,
         onNewGame = {
+            dismissPlacementMessage()
+            suppressNextDragPlacementFailure = false
             recordCurrentScore()
             vm.onNewGame()
         },
@@ -511,6 +543,24 @@ fun BlockLogicScreen(
         onCellTapped = vm::onCellTapped,
         onPieceDropped = vm::onPieceDropped,
         onPieceSelected = vm::onPieceSelected,
+        onPieceSelectionCleared = vm::clearPieceSelection,
+        onDragPlacementFailed = { failure ->
+            if (invalidPlacementFeedbackMode == InvalidPlacementFeedbackMode.WhileDragging) {
+                val msg = placementFailureMessage(appLanguage, failure)
+                dismissPlacementMessage()
+                snackbarJob = snackbarScope.launch {
+                    snackbarHostState.showSnackbar(msg)
+                }
+            }
+        },
+        onDragPlacementFeedbackCleared = {
+            if (invalidPlacementFeedbackMode == InvalidPlacementFeedbackMode.WhileDragging) {
+                dismissPlacementMessage()
+            }
+        },
+        onSuppressNextDragDropFailure = {
+            suppressNextDragPlacementFailure = true
+        },
     )
 }
 
@@ -523,8 +573,14 @@ fun BlockLogicContent(
     onCellTapped: (x: Int, y: Int) -> Unit,
     onPieceDropped: (pieceId: Long, x: Int, y: Int) -> Unit,
     onPieceSelected: (Int) -> Unit,
+    onPieceSelectionCleared: () -> Unit,
+    onDragPlacementFailed: (PlacementFailure) -> Unit,
+    onDragPlacementFeedbackCleared: () -> Unit,
+    onSuppressNextDragDropFailure: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val dragFingerOffsetPx = LocalDragFingerOffsetLevel.current.offsetPx
+    val invalidPlacementFeedbackMode = LocalInvalidPlacementFeedbackMode.current
     val density = LocalDensity.current
     var contentTopLeftInRoot by remember { mutableStateOf(Offset.Zero) }
     var gridTopLeftInRoot by remember(state.gridSize) { mutableStateOf(Offset.Zero) }
@@ -542,6 +598,7 @@ fun BlockLogicContent(
     var dragSnappedPlacement by remember { mutableStateOf<DragPlacement?>(null) }
     var dragValidOrigins by remember { mutableStateOf<Set<CellCoord>>(emptySet()) }
     var dragValidCells by remember { mutableStateOf<Set<CellCoord>>(emptySet()) }
+    var lastDragPlacementFailure by remember { mutableStateOf<PlacementFailure?>(null) }
     var dragLogSessionId by remember { mutableStateOf<Int?>(null) }
     var dragLogSequence by remember { mutableStateOf(0) }
 
@@ -553,11 +610,13 @@ fun BlockLogicContent(
     val rules = remember(state.gridSize, state.difficulty) {
         resolveGameConfig(state.gridSize, state.difficulty).rules
     }
+    val activeHighlightedPiece = draggingPieceSnapshot
+        ?: state.selectedPieceIndex?.let(state.pieces::getOrNull)
     val highlightedCells = if (draggingPieceId != null) dragValidCells else state.validCells
-    val highlightedCellColor = draggingPieceSnapshot
+    val highlightedCellColor = activeHighlightedPiece
         ?.color
         ?.toPaletteColor()
-        ?.copy(alpha = 0.5f)
+        ?.copy(alpha = 0.15f)
         ?: MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f)
 
     fun formatPlacement(piece: Piece, placement: DragPlacement?): String {
@@ -607,7 +666,70 @@ fun BlockLogicContent(
         dragSnappedPlacement = null
         dragValidOrigins = emptySet()
         dragValidCells = emptySet()
+        lastDragPlacementFailure = null
         dragLogSessionId = null
+    }
+
+    fun updateDragPlacementFeedback(piece: Piece?, resolution: DragResolution?, fingerInRoot: Offset?) {
+        if (invalidPlacementFeedbackMode != InvalidPlacementFeedbackMode.WhileDragging) {
+            if (lastDragPlacementFailure != null) {
+                lastDragPlacementFailure = null
+                onDragPlacementFeedbackCleared()
+            }
+            return
+        }
+
+        if (piece == null || fingerInRoot == null || resolution?.isFingerInsideBoard != true) {
+            if (lastDragPlacementFailure != null) {
+                lastDragPlacementFailure = null
+                onDragPlacementFeedbackCleared()
+            }
+            return
+        }
+
+        val failure = if (resolution.placement == null) {
+            val geometry = buildGridGeometry(
+                gridTopLeftInRoot = gridTopLeftInRoot,
+                gridSizePx = gridSizePx,
+                gridCount = gridCount,
+                gapPx = gridGapPx,
+            ) ?: return
+            val anchor = dragAnchor ?: return
+            val hoveredX = resolveAttemptedPointerCellAxis(
+                pointerPosition = fingerInRoot.x,
+                axis = geometry.x,
+                cellExtent = geometry.cellWidth,
+            )
+            val hoveredY = resolveAttemptedPointerCellAxis(
+                pointerPosition = fingerInRoot.y,
+                axis = geometry.y,
+                cellExtent = geometry.cellHeight,
+            )
+            val attempted = if (hoveredX != null && hoveredY != null) {
+                resolveAttemptedDragOrigin(
+                    hoveredCell = CellCoord(x = hoveredX, y = hoveredY),
+                    anchor = CellOffset(dx = anchor.dx, dy = anchor.dy),
+                )
+            } else {
+                null
+            }
+            attempted?.let {
+                GameEngine.validatePlacement(state.grid, piece, attempted.x, attempted.y, rules)
+            }
+        } else {
+            null
+        }
+
+        when {
+            failure != null && failure != lastDragPlacementFailure -> {
+                lastDragPlacementFailure = failure
+                onDragPlacementFailed(failure)
+            }
+            failure == null && lastDragPlacementFailure != null -> {
+                lastDragPlacementFailure = null
+                onDragPlacementFeedbackCleared()
+            }
+        }
     }
 
     LaunchedEffect(state.pieces.map { it.id }) {
@@ -710,7 +832,7 @@ fun BlockLogicContent(
         )
     }
 
-    fun computeDragAttempt(piece: Piece, fingerInRoot: Offset): DragPlacement? {
+    fun computeAttemptedDragPlacement(fingerInRoot: Offset): DragPlacement? {
         val geometry = measuredGridGeometry() ?: return null
         val anchor = dragAnchor ?: return null
         val hoveredX = resolveAttemptedPointerCellAxis(
@@ -789,12 +911,15 @@ fun BlockLogicContent(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 64.dp),
+                .height(96.dp)
+                .zIndex(100f),
             contentAlignment = Alignment.TopCenter,
         ) {
             SnackbarHost(
                 hostState = snackbarHostState,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 snackbar = { data ->
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
@@ -807,7 +932,7 @@ fun BlockLogicContent(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer,
-                            maxLines = 2,
+                            maxLines = 3,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
@@ -877,9 +1002,9 @@ fun BlockLogicContent(
                         draggingPieceSnapshot = piece
                         val validOrigins = GameEngine.findValidOrigins(state.grid, piece, rules)
                         dragValidOrigins = validOrigins
-                        dragValidCells = previewCellsForOrigins(piece, validOrigins)
                         draggingOffsetPx = Offset.Zero
                         val startFinger = coords.localToRoot(startOffsetPx)
+                        val displayedStartFinger = adjustedDragFingerInRoot(startFinger, dragFingerOffsetPx)
                         dragStartFingerInRoot = startFinger
                         dragStartOffsetInPiece = startOffsetPx
 
@@ -913,22 +1038,27 @@ fun BlockLogicContent(
                         } else {
                             null
                         }
-                        val resolution = if (geometry != null) computeDragResolution(piece, startFinger) else null
+                        val resolution = if (geometry != null) computeDragResolution(piece, displayedStartFinger) else null
                         dragSnappedPlacement = resolution?.placement
+                        dragValidCells = previewCellsForPlacement(
+                            piece = piece,
+                            origin = resolution?.placement?.let { p -> CellCoord(x = p.originX, y = p.originY) },
+                        )
+                        updateDragPlacementFeedback(piece, resolution, displayedStartFinger)
                         logDrag(
                             buildDragLogMessage(
                                 phase = "start",
                                 sessionId = dragLogSessionId,
                                 pieceIndex = index,
                                 piece = piece,
-                                fingerInRoot = startFinger,
+                                fingerInRoot = displayedStartFinger,
                                 dragOffsetPx = draggingOffsetPx,
                                 startOffsetInPiece = dragStartOffsetInPiece,
                                 startOffsetInContent = dragStartOffsetInContent,
                                 anchor = dragAnchor,
                                 geometry = geometry,
                                 resolution = resolution,
-                                freeOverlayTopLeftInRoot = freeOverlayTopLeftInRoot(startFinger, info),
+                                freeOverlayTopLeftInRoot = freeOverlayTopLeftInRoot(displayedStartFinger, info),
                                 snappedOverlayTopLeftInRoot = resolution?.placement?.let(::snappedOverlayTopLeftInRoot),
                                 overlayMode = if (resolution?.placement != null) "snapped" else "free-outside-board",
                                 extra = formatPlacement(piece, resolution?.placement)
@@ -962,29 +1092,37 @@ fun BlockLogicContent(
                     val startFinger = dragStartFingerInRoot
                     val piece = draggingPieceSnapshot
                     val currentFinger = startFinger?.plus(newOffset)
+                    val displayedFinger = currentFinger?.let { adjustedDragFingerInRoot(it, dragFingerOffsetPx) }
                     val geometry = measuredGridGeometry()
-                    val resolution = if (piece != null && currentFinger != null) {
-                        computeDragResolution(piece, currentFinger)
+                    val resolution = if (piece != null && displayedFinger != null) {
+                        computeDragResolution(piece, displayedFinger)
                     } else {
                         null
                     }
                     draggingOffsetPx = newOffset
                     dragSnappedPlacement = resolution?.placement
+                    dragValidCells = piece?.let {
+                        previewCellsForPlacement(
+                            piece = it,
+                            origin = resolution?.placement?.let { p -> CellCoord(x = p.originX, y = p.originY) },
+                        )
+                    } ?: emptySet()
+                    updateDragPlacementFeedback(piece, resolution, displayedFinger)
                     logDrag(
                         buildDragLogMessage(
                             phase = "move",
                             sessionId = dragLogSessionId,
                             pieceIndex = state.pieces.indexOfFirst { it.id == pieceId }.takeIf { it >= 0 },
                             piece = piece,
-                            fingerInRoot = currentFinger,
+                            fingerInRoot = displayedFinger,
                             dragOffsetPx = newOffset,
                             startOffsetInPiece = dragStartOffsetInPiece,
                             startOffsetInContent = dragStartOffsetInContent,
                             anchor = dragAnchor,
                             geometry = geometry,
                             resolution = resolution,
-                            freeOverlayTopLeftInRoot = if (currentFinger != null && pieceId != null) {
-                                pieceLayoutInfos[pieceId]?.let { info -> freeOverlayTopLeftInRoot(currentFinger, info) }
+                            freeOverlayTopLeftInRoot = if (displayedFinger != null && pieceId != null) {
+                                pieceLayoutInfos[pieceId]?.let { info -> freeOverlayTopLeftInRoot(displayedFinger, info) }
                             } else null,
                             snappedOverlayTopLeftInRoot = resolution?.placement?.let(::snappedOverlayTopLeftInRoot),
                             overlayMode = when {
@@ -1002,15 +1140,17 @@ fun BlockLogicContent(
                     }
                     val pieceId = draggingPieceId
                     val piece = draggingPieceSnapshot
-                    val finger = dragStartFingerInRoot?.plus(draggingOffsetPx)
+                    val rawFinger = dragStartFingerInRoot?.plus(draggingOffsetPx)
+                    val finger = rawFinger?.let { adjustedDragFingerInRoot(it, dragFingerOffsetPx) }
                     val geometry = measuredGridGeometry()
                     val resolution = if (piece != null && finger != null) computeDragResolution(piece, finger) else null
-                    val attemptedPlacement = if (piece != null && finger != null) computeDragAttempt(piece, finger) else null
-                    val placement = when {
-                        resolution?.placement != null -> resolution.placement
-                        attemptedPlacement != null -> null
-                        else -> dragSnappedPlacement
+                    val attemptedPlacement = if (finger != null) computeAttemptedDragPlacement(finger) else null
+                    val placement = if (resolution != null) {
+                        resolution.placement
+                    } else {
+                        dragSnappedPlacement
                     }
+
                     placement?.let { resolvedPlacement ->
                         logDrag(
                             buildDragLogMessage(
@@ -1036,54 +1176,63 @@ fun BlockLogicContent(
                         if (pieceId != null) {
                             onPieceDropped(pieceId, resolvedPlacement.originX, resolvedPlacement.originY)
                         }
-                    } ?: attemptedPlacement?.let { attempted ->
-                        logDrag(
-                            buildDragLogMessage(
-                                phase = "end-invalid-drop",
-                                sessionId = dragLogSessionId,
-                                pieceIndex = state.pieces.indexOfFirst { it.id == pieceId }.takeIf { it >= 0 },
-                                piece = piece,
-                                fingerInRoot = finger,
-                                dragOffsetPx = draggingOffsetPx,
-                                startOffsetInPiece = dragStartOffsetInPiece,
-                                startOffsetInContent = dragStartOffsetInContent,
-                                anchor = dragAnchor,
-                                geometry = geometry,
-                                resolution = resolution,
-                                freeOverlayTopLeftInRoot = if (finger != null && pieceId != null) {
-                                    pieceLayoutInfos[pieceId]?.let { info -> freeOverlayTopLeftInRoot(finger, info) }
-                                } else null,
-                                snappedOverlayTopLeftInRoot = null,
-                                overlayMode = if (resolution?.isFingerInsideBoard == true) "invalid-inside-board" else "invalid-outside-board",
-                                extra = piece?.let { formatPlacement(it, attempted) }
-                            )
-                        )
-                        if (pieceId != null) {
-                            onPieceDropped(pieceId, attempted.originX, attempted.originY)
-                        }
                     } ?: run {
-                        logDrag(
-                            buildDragLogMessage(
-                                phase = "end-no-drop",
-                                sessionId = dragLogSessionId,
-                                pieceIndex = state.pieces.indexOfFirst { it.id == pieceId }.takeIf { it >= 0 },
-                                piece = piece,
-                                fingerInRoot = finger,
-                                dragOffsetPx = draggingOffsetPx,
-                                startOffsetInPiece = dragStartOffsetInPiece,
-                                startOffsetInContent = dragStartOffsetInContent,
-                                anchor = dragAnchor,
-                                geometry = geometry,
-                                resolution = resolution,
-                                freeOverlayTopLeftInRoot = if (finger != null && pieceId != null) {
-                                    pieceLayoutInfos[pieceId]?.let { info -> freeOverlayTopLeftInRoot(finger, info) }
-                                } else null,
-                                snappedOverlayTopLeftInRoot = null,
-                                overlayMode = if (resolution?.isFingerInsideBoard == true) "free-inside-board" else "free-outside-board",
-                                extra = "snap=null"
+                        val shouldReportInvalidDrop = resolution?.isFingerInsideBoard == true && attemptedPlacement != null
+                        if (shouldReportInvalidDrop) {
+                            val attempted = attemptedPlacement
+                            if (invalidPlacementFeedbackMode == InvalidPlacementFeedbackMode.WhileDragging) {
+                                onSuppressNextDragDropFailure()
+                            }
+                            logDrag(
+                                buildDragLogMessage(
+                                    phase = "end-invalid-drop",
+                                    sessionId = dragLogSessionId,
+                                    pieceIndex = state.pieces.indexOfFirst { it.id == pieceId }.takeIf { it >= 0 },
+                                    piece = piece,
+                                    fingerInRoot = finger,
+                                    dragOffsetPx = draggingOffsetPx,
+                                    startOffsetInPiece = dragStartOffsetInPiece,
+                                    startOffsetInContent = dragStartOffsetInContent,
+                                    anchor = dragAnchor,
+                                    geometry = geometry,
+                                    resolution = resolution,
+                                    freeOverlayTopLeftInRoot = if (finger != null && pieceId != null) {
+                                        pieceLayoutInfos[pieceId]?.let { info -> freeOverlayTopLeftInRoot(finger, info) }
+                                    } else null,
+                                    snappedOverlayTopLeftInRoot = snappedOverlayTopLeftInRoot(attempted),
+                                    overlayMode = "drop-invalid-inside-board",
+                                    extra = piece?.let { draggedPiece -> formatPlacement(draggedPiece, attempted) },
+                                )
                             )
-                        )
+                            if (pieceId != null) {
+                                onPieceDropped(pieceId, attempted.originX, attempted.originY)
+                            }
+                        } else {
+                            logDrag(
+                                buildDragLogMessage(
+                                    phase = "end-no-drop",
+                                    sessionId = dragLogSessionId,
+                                    pieceIndex = state.pieces.indexOfFirst { it.id == pieceId }.takeIf { it >= 0 },
+                                    piece = piece,
+                                    fingerInRoot = finger,
+                                    dragOffsetPx = draggingOffsetPx,
+                                    startOffsetInPiece = dragStartOffsetInPiece,
+                                    startOffsetInContent = dragStartOffsetInContent,
+                                    anchor = dragAnchor,
+                                    geometry = geometry,
+                                    resolution = resolution,
+                                    freeOverlayTopLeftInRoot = if (finger != null && pieceId != null) {
+                                        pieceLayoutInfos[pieceId]?.let { info -> freeOverlayTopLeftInRoot(finger, info) }
+                                    } else null,
+                                    snappedOverlayTopLeftInRoot = null,
+                                    overlayMode = if (resolution?.isFingerInsideBoard == true) "free-inside-board" else "free-outside-board",
+                                    extra = "snap=null"
+                                )
+                            )
+                            onPieceSelectionCleared()
+                        }
                     }
+                    onDragPlacementFeedbackCleared()
                     clearDragState()
                 },
                 onDragCancel = {
@@ -1092,7 +1241,8 @@ fun BlockLogicContent(
                     }
                     val pieceId = draggingPieceId
                     val piece = draggingPieceSnapshot
-                    val finger = dragStartFingerInRoot?.plus(draggingOffsetPx)
+                    val rawFinger = dragStartFingerInRoot?.plus(draggingOffsetPx)
+                    val finger = rawFinger?.let { adjustedDragFingerInRoot(it, dragFingerOffsetPx) }
                     val geometry = measuredGridGeometry()
                     val resolution = if (piece != null && finger != null) computeDragResolution(piece, finger) else null
                     logDrag(
@@ -1116,6 +1266,8 @@ fun BlockLogicContent(
                             extra = piece?.let { formatPlacement(it, dragSnappedPlacement) }
                         )
                     )
+                    onDragPlacementFeedbackCleared()
+                    onPieceSelectionCleared()
                     clearDragState()
                 },
                 cellSize = gridCellSizeDp,
@@ -1129,12 +1281,14 @@ fun BlockLogicContent(
             val info = pieceLayoutInfos[dragPieceId]
             val startFingerInRoot = dragStartFingerInRoot
             if (piece != null && info != null && startFingerInRoot != null) {
-                val fingerInRoot = startFingerInRoot + draggingOffsetPx
+                val fingerInRoot = adjustedDragFingerInRoot(startFingerInRoot + draggingOffsetPx, dragFingerOffsetPx)
                 val freeOverlayTopLeftInRoot = freeOverlayTopLeftInRoot(fingerInRoot, info)
                 val freeOverlayTopLeftLocal = freeOverlayTopLeftInRoot - contentTopLeftInRoot
-                val placement = dragSnappedPlacement
                 val resolution = computeDragResolution(piece, fingerInRoot)
-                val isInvalidInsideBoard = resolution?.isFingerInsideBoard == true && placement == null
+                val placement = resolution?.placement
+                val isInvalidPlacement = resolution?.isFingerInsideBoard == true && placement == null
+                val dragBorderBaseColor = piece.color.toPaletteColor()
+                val invalidBorderColor = Color(0xFF7A0F1A)
 
                 Box(
                     modifier = Modifier
@@ -1149,11 +1303,9 @@ fun BlockLogicContent(
                     PiecePreview(
                         piece = piece,
                         cellSize = gridCellSizeDp,
-                        borderColor = if (isInvalidInsideBoard) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.primary
-                        },
+                        pressed = true,
+                        borderColor = if (isInvalidPlacement) invalidBorderColor else dragBorderBaseColor,
+                        borderWidth = dragPreviewBorderWidth(isInvalidPlacement),
                     )
                 }
             }
@@ -1190,6 +1342,50 @@ private fun GridView(
     onGridMeasured: (topLeftInRoot: Offset, sizePx: IntSize) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val blockStyle = LocalBlockVisualStyle.current
+    val paletteColors = BlockWisePalette.blockColors(
+        palette = LocalBlockColorPalette.current,
+        darkTheme = LocalPaletteIsDarkTheme.current,
+    )
+    val paletteAccent = themedBoardPaletteAccent(
+        style = blockStyle,
+        colors = listOf(
+            paletteColors.red,
+            paletteColors.green,
+            paletteColors.blue,
+            paletteColors.yellow,
+        ),
+    )
+    val boardBaseSurfaceColor = blendColors(
+        MaterialTheme.colorScheme.background,
+        MaterialTheme.colorScheme.surfaceVariant,
+        0.34f,
+    )
+    val boardBaseBorderColor = blendColors(
+        MaterialTheme.colorScheme.background,
+        MaterialTheme.colorScheme.outlineVariant,
+        0.5f,
+    )
+    val emptyCellColor = themedEmptyBoardCellColor(
+        baseColor = boardBaseSurfaceColor,
+        paletteAccent = paletteAccent,
+        style = blockStyle,
+    )
+    val emptyCellBorderColor = themedEmptyBoardCellBorderColor(
+        baseColor = boardBaseBorderColor,
+        paletteAccent = paletteAccent,
+        style = blockStyle,
+    )
+    val highlightedEmptyCellColor = themedHighlightedBoardCellColor(
+        baseColor = emptyCellColor,
+        highlightColor = highlightedCellColor,
+        style = blockStyle,
+    )
+    val highlightedEmptyCellBorderColor = themedHighlightedBoardCellBorderColor(
+        baseColor = emptyCellBorderColor,
+        highlightColor = highlightedCellColor,
+        style = blockStyle,
+    )
     val size = grid.size.value
     Column(
         modifier = modifier.onGloballyPositioned { coords ->
@@ -1205,11 +1401,31 @@ private fun GridView(
                     val isClearingCell = y in clearingRows || x in clearingCols
                     val isLockedCell = cell?.isLocked == true
                     val isPrefilledCell = cell?.isPrefilled == true
+                    val cellFillColor = when {
+                        cell != null -> cell.color.toPaletteColor()
+                        isHighlightedCell -> highlightedEmptyCellColor
+                        else -> emptyCellColor
+                    }
+                    val cellBorderColor = when {
+                        isLockedCell -> MaterialTheme.colorScheme.primary
+                        isPrefilledCell -> MaterialTheme.colorScheme.secondary
+                        isHighlightedCell -> highlightedEmptyCellBorderColor
+                        else -> emptyCellBorderColor
+                    }
                     val clearProgress by animateFloatAsState(
                         targetValue = if (isClearingCell) 0f else 1f,
                         animationSpec = tween(durationMillis = 220),
                     )
-                    Box(
+                    BlockTile3D(
+                        fillColor = cellFillColor,
+                        borderColor = cellBorderColor,
+                        borderWidth = if (isLockedCell) 2.dp else 1.dp,
+                        cornerRadius = 8.dp,
+                        recessed = cell == null,
+                        elevation = when {
+                            cell != null -> 3.dp
+                            else -> 0.dp
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .aspectRatio(1f)
@@ -1218,28 +1434,137 @@ private fun GridView(
                                 scaleX = 0.85f + 0.15f * clearProgress
                                 scaleY = 0.85f + 0.15f * clearProgress
                             }
-                            .border(
-                                width = if (isLockedCell) 2.dp else 1.dp,
-                                color = when {
-                                    isLockedCell -> MaterialTheme.colorScheme.primary
-                                    isPrefilledCell -> MaterialTheme.colorScheme.secondary
-                                    else -> MaterialTheme.colorScheme.outlineVariant
-                                }
-                            )
-                            .background(
-                                when {
-                                    cell != null -> cell.color.toPaletteColor()
-                                    isHighlightedCell -> highlightedCellColor
-                                    else -> MaterialTheme.colorScheme.surface
-                                }
-                            )
                             .clickable { onCellTapped(x, y) },
-                        contentAlignment = Alignment.Center,
                     ) {}
                 }
             }
         }
     }
+}
+
+private fun themedBoardPaletteAccent(
+    style: BlockVisualStyle,
+    colors: List<Color>,
+): Color {
+    val average = averageColor(colors)
+    val vivid = colors.maxByOrNull(::colorVividness) ?: average
+    val vividTarget = when (style) {
+        BlockVisualStyle.Flat -> vivid
+        BlockVisualStyle.Raised3D -> vivid.lighten(0.04f)
+        BlockVisualStyle.LiquidGlass -> vivid.lighten(0.1f)
+        BlockVisualStyle.Neon -> vivid.lighten(0.16f)
+    }
+    val amount = when (style) {
+        BlockVisualStyle.Flat -> 0.18f
+        BlockVisualStyle.Raised3D -> 0.22f
+        BlockVisualStyle.LiquidGlass -> 0.28f
+        BlockVisualStyle.Neon -> 0.34f
+    }
+    return blendColors(average, vividTarget, amount)
+}
+
+private fun themedEmptyBoardCellColor(
+    baseColor: Color,
+    paletteAccent: Color,
+    style: BlockVisualStyle,
+): Color {
+    val amount = when (style) {
+        BlockVisualStyle.Flat -> 0.08f
+        BlockVisualStyle.Raised3D -> 0.11f
+        BlockVisualStyle.LiquidGlass -> 0.14f
+        BlockVisualStyle.Neon -> 0.18f
+    }
+    return blendColors(baseColor, paletteAccent, amount)
+}
+
+private fun themedEmptyBoardCellBorderColor(
+    baseColor: Color,
+    paletteAccent: Color,
+    style: BlockVisualStyle,
+): Color {
+    val amount = when (style) {
+        BlockVisualStyle.Flat -> 0.1f
+        BlockVisualStyle.Raised3D -> 0.13f
+        BlockVisualStyle.LiquidGlass -> 0.16f
+        BlockVisualStyle.Neon -> 0.2f
+    }
+    return blendColors(baseColor, paletteAccent.darken(0.14f), amount)
+}
+
+private fun themedHighlightedBoardCellColor(
+    baseColor: Color,
+    highlightColor: Color,
+    style: BlockVisualStyle,
+): Color {
+    val amount = when (style) {
+        BlockVisualStyle.Flat -> 0.24f
+        BlockVisualStyle.Raised3D -> 0.28f
+        BlockVisualStyle.LiquidGlass -> 0.33f
+        BlockVisualStyle.Neon -> 0.38f
+    }
+    val alpha = when (style) {
+        BlockVisualStyle.Flat -> 0.88f
+        BlockVisualStyle.Raised3D -> 0.88f
+        BlockVisualStyle.LiquidGlass -> 0.82f
+        BlockVisualStyle.Neon -> 0.84f
+    }
+    return blendColors(baseColor, highlightColor.copy(alpha = 1f), amount).copy(alpha = alpha)
+}
+
+private fun themedHighlightedBoardCellBorderColor(
+    baseColor: Color,
+    highlightColor: Color,
+    style: BlockVisualStyle,
+): Color {
+    val amount = when (style) {
+        BlockVisualStyle.Flat -> 0.32f
+        BlockVisualStyle.Raised3D -> 0.36f
+        BlockVisualStyle.LiquidGlass -> 0.4f
+        BlockVisualStyle.Neon -> 0.45f
+    }
+    return blendColors(
+        baseColor,
+        highlightColor.copy(alpha = 1f).lighten(0.08f),
+        amount,
+    ).copy(alpha = 0.74f)
+}
+
+private fun averageColor(colors: List<Color>): Color {
+    val count = colors.size.coerceAtLeast(1)
+    return Color(
+        red = colors.sumOf { it.red.toDouble() }.toFloat() / count,
+        green = colors.sumOf { it.green.toDouble() }.toFloat() / count,
+        blue = colors.sumOf { it.blue.toDouble() }.toFloat() / count,
+        alpha = colors.sumOf { it.alpha.toDouble() }.toFloat() / count,
+    )
+}
+
+private fun colorVividness(color: Color): Float {
+    val max = maxOf(color.red, color.green, color.blue)
+    val min = minOf(color.red, color.green, color.blue)
+    return (max - min) + max * 0.18f
+}
+
+private fun blendColors(start: Color, end: Color, fraction: Float): Color {
+    val clampedFraction = fraction.coerceIn(0f, 1f)
+    return Color(
+        red = start.red + (end.red - start.red) * clampedFraction,
+        green = start.green + (end.green - start.green) * clampedFraction,
+        blue = start.blue + (end.blue - start.blue) * clampedFraction,
+        alpha = start.alpha + (end.alpha - start.alpha) * clampedFraction,
+    )
+}
+
+internal fun dragPreviewBorderColor(pieceColor: Color, invalidPlacement: Boolean): Color {
+    return if (invalidPlacement) {
+        pieceColor.lighten(0.34f)
+    } else {
+        pieceColor.darken(0.12f)
+    }
+}
+
+internal fun dragPreviewBorderWidth(invalidPlacement: Boolean): Dp {
+    return if (invalidPlacement) 2.6.dp else 1.6.dp
 }
 
 
@@ -1258,77 +1583,89 @@ private fun PiecesRow(
     cellSize: Dp,
     containerPadding: Dp,
 ) {
-    LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.SpaceAround,
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        itemsIndexed(
-            items = pieces,
-            key = { _, piece -> piece.id },
-        ) { index, piece ->
-            val isSelected = index == selectedIndex
-
+        repeat(3) { index ->
+            val piece = pieces.getOrNull(index)
             Box(
-                modifier = Modifier
-                    .onGloballyPositioned { coords ->
-                        onPieceCoordinates(piece.id, coords)
-                        onPieceMeasured(
-                            piece.id,
-                            PieceLayoutInfo(
-                                sizePx = coords.size,
-                            )
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (piece != null) {
+                    val isSelected = index == selectedIndex
+                    val trayAlpha by animateFloatAsState(
+                        targetValue = if (piece.id == draggingPieceId) 0.22f else 1f,
+                        animationSpec = tween(durationMillis = 180),
+                        label = "piece-tray-alpha",
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .onGloballyPositioned { coords ->
+                                onPieceCoordinates(piece.id, coords)
+                                onPieceMeasured(
+                                    piece.id,
+                                    PieceLayoutInfo(
+                                        sizePx = coords.size,
+                                    )
+                                )
+                            }
+                            .pointerInput(piece.id) {
+                                awaitEachGesture {
+                                    val down = awaitFirstDown(requireUnconsumed = false)
+                                    val pointerId = down.id
+                                    var dragStarted = false
+
+                                    val dragChange = awaitTouchSlopOrCancellation(pointerId) { change, overSlop ->
+                                        change.consume()
+                                        if (!dragStarted) {
+                                            dragStarted = true
+                                            onDragStart(index, piece, down.position)
+                                        }
+                                        if (overSlop != Offset.Zero) {
+                                            onDrag(overSlop)
+                                        }
+                                    }
+
+                                    if (dragChange == null) {
+                                        val up = waitForUpOrCancellation()
+                                        if (up != null) {
+                                            onPieceSelected(index)
+                                        } else {
+                                            onDragCancel()
+                                        }
+                                        return@awaitEachGesture
+                                    }
+
+                                    drag(pointerId) { change ->
+                                        val delta = change.positionChange()
+                                        if (delta != Offset.Zero) {
+                                            change.consume()
+                                            onDrag(delta)
+                                        }
+                                    }
+                                    onDragEnd()
+                                }
+                            }
+                            .padding(containerPadding)
+                            .graphicsLayer(alpha = trayAlpha)
+                    ) {
+                        PiecePreview(
+                            piece = piece,
+                            cellSize = cellSize,
+                            borderColor = if (isSelected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.outlineVariant
+                            },
                         )
                     }
-                    .pointerInput(piece.id) {
-                        awaitEachGesture {
-                            val down = awaitFirstDown(requireUnconsumed = false)
-                            val pointerId = down.id
-                            var dragStarted = false
-
-                            val dragChange = awaitTouchSlopOrCancellation(pointerId) { change, overSlop ->
-                                change.consume()
-                                if (!dragStarted) {
-                                    dragStarted = true
-                                    onDragStart(index, piece, down.position)
-                                }
-                                if (overSlop != Offset.Zero) {
-                                    onDrag(overSlop)
-                                }
-                            }
-
-                            if (dragChange == null) {
-                                val up = waitForUpOrCancellation()
-                                if (up != null) {
-                                    onPieceSelected(index)
-                                } else {
-                                    onDragCancel()
-                                }
-                                return@awaitEachGesture
-                            }
-
-                            drag(pointerId) { change ->
-                                val delta = change.positionChange()
-                                if (delta != Offset.Zero) {
-                                    change.consume()
-                                    onDrag(delta)
-                                }
-                            }
-                            onDragEnd()
-                        }
-                    }
-                    .padding(containerPadding)
-                    .graphicsLayer(alpha = if (piece.id == draggingPieceId) 0.22f else 1f)
-            ) {
-                PiecePreview(
-                    piece = piece,
-                    cellSize = cellSize,
-                    borderColor = if (isSelected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.outlineVariant
-                    },
-                )
+                }
             }
         }
     }
@@ -1338,7 +1675,9 @@ private fun PiecesRow(
 private fun PiecePreview(
     piece: Piece,
     cellSize: Dp,
+    pressed: Boolean = false,
     borderColor: Color = MaterialTheme.colorScheme.outlineVariant,
+    borderWidth: Dp = 1.2.dp,
 ) {
     val maxDx = piece.shape.cells.maxOf { it.dx }
     val maxDy = piece.shape.cells.maxOf { it.dy }
@@ -1355,15 +1694,23 @@ private fun PiecePreview(
             .height(totalHeight)
     ) {
         piece.shape.cells.forEach { cell ->
-            Box(
+            BlockTile3D(
+                fillColor = piece.color.toPaletteColor(),
+                borderColor = borderColor,
+                borderWidth = borderWidth,
+                cornerRadius = (cellSize * 0.22f).coerceAtLeast(6.dp),
+                elevation = 5.dp,
+                interaction = if (pressed) {
+                    BlockTileInteraction.Pressed
+                } else {
+                    BlockTileInteraction.Normal
+                },
                 modifier = Modifier
-                    .offset(
+                    .absoluteOffset(
                         x = (cellSize + gap) * cell.dx,
                         y = (cellSize + gap) * cell.dy,
                     )
                     .size(cellSize)
-                    .border(1.dp, borderColor)
-                    .background(piece.color.toPaletteColor()),
             ) {}
         }
     }
@@ -1402,6 +1749,10 @@ private fun BlockLogicContentPreview() {
             onCellTapped = { _, _ -> },
             onPieceDropped = { _, _, _ -> },
             onPieceSelected = {},
+            onPieceSelectionCleared = {},
+            onDragPlacementFailed = {},
+            onDragPlacementFeedbackCleared = {},
+            onSuppressNextDragDropFailure = {},
         )
     }
 }

@@ -16,7 +16,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.material3.MaterialTheme
-import com.arkivanov.decompose.router.stack.active
 
 import com.ugurbuga.blockwise.blocklogic.ui.BlockLogicScreen
 import com.ugurbuga.blockwise.blocklogic.ui.LevelSelectionScreen
@@ -78,12 +77,20 @@ internal fun scrollStateKey(
 @Preview
 fun App() {
     var appThemeMode by rememberSaveable { mutableStateOf(initializeAppThemeMode()) }
+    var appColorPalette by rememberSaveable { mutableStateOf(initializeAppColorPalette()) }
+    var blockColorPalette by rememberSaveable { mutableStateOf(initializeBlockColorPalette()) }
+    var blockVisualStyle by rememberSaveable { mutableStateOf(initializeBlockVisualStyle()) }
+    var neonPulseSpeed by rememberSaveable { mutableStateOf(initializeNeonPulseSpeed()) }
+    var dragFingerOffsetLevel by rememberSaveable { mutableStateOf(initializeDragFingerOffsetLevel()) }
+    var invalidPlacementFeedbackMode by rememberSaveable {
+        mutableStateOf(initializeInvalidPlacementFeedbackMode())
+    }
 
-    BlockWiseTheme(themeMode = appThemeMode) {
+    BlockWiseTheme(themeMode = appThemeMode, colorPalette = appColorPalette) {
         val navigation = remember { AppRootComponent() }
         val childStack by navigation.childStack.subscribeAsState()
-        var selectedSize by remember { mutableStateOf(GridSize(10)) }
-        var selectedDifficulty by remember { mutableStateOf(Difficulty.Normal) }
+        var selectedSize by remember { mutableStateOf(initializeSelectedGridSize()) }
+        var selectedDifficulty by remember { mutableStateOf(initializeSelectedDifficulty()) }
         var appLanguage by rememberSaveable { mutableStateOf(initializeAppLanguage()) }
         val pageScrollOffsets = rememberSaveable(
             saver = mapSaver(
@@ -139,6 +146,11 @@ fun App() {
             ) {
                 CompositionLocalProvider(
                     LocalAppLanguage provides appLanguage,
+                    LocalBlockColorPalette provides blockColorPalette,
+                    LocalBlockVisualStyle provides blockVisualStyle,
+                    LocalNeonPulseSpeed provides neonPulseSpeed,
+                    LocalDragFingerOffsetLevel provides dragFingerOffsetLevel,
+                    LocalInvalidPlacementFeedbackMode provides invalidPlacementFeedbackMode,
                     LocalLayoutDirection provides if (appLanguage.isRtl) {
                         LayoutDirection.Rtl
                     } else {
@@ -187,8 +199,14 @@ fun App() {
                                         modifier = Modifier.fillMaxSize(),
                                         selectedSize = selectedSize,
                                         selectedDifficulty = selectedDifficulty,
-                                        onSizeSelected = { selectedSize = it },
-                                        onDifficultySelected = { selectedDifficulty = it },
+                                        onSizeSelected = {
+                                            selectedSize = it
+                                            LevelSelectionStore.saveSelectedGridSize(it)
+                                        },
+                                        onDifficultySelected = {
+                                            selectedDifficulty = it
+                                            LevelSelectionStore.saveSelectedDifficulty(it)
+                                        },
                                         onOpenRules = {
                                             navigation.openRules()
                                         },
@@ -269,16 +287,60 @@ fun App() {
                                         modifier = Modifier.fillMaxSize(),
                                         selectedLanguage = appLanguage,
                                         selectedThemeMode = appThemeMode,
+                                        selectedThemeColorPalette = appColorPalette,
+                                        selectedBlockColorPalette = blockColorPalette,
+                                        selectedBlockVisualStyle = blockVisualStyle,
+                                        selectedNeonPulseSpeed = neonPulseSpeed,
+                                        selectedDragFingerOffsetLevel = dragFingerOffsetLevel,
+                                        selectedInvalidPlacementFeedbackMode = invalidPlacementFeedbackMode,
                                         onLanguageSelected = { language ->
                                             if (language != appLanguage) {
                                                 appLanguage = language
                                                 AppLanguageStore.saveSelectedLanguage(language)
+                                                AppLanguageStore.applyLanguage(language)
                                             }
                                         },
                                         onThemeModeSelected = { themeMode ->
                                             if (themeMode != appThemeMode) {
                                                 AppThemeModeStore.saveSelectedThemeMode(themeMode)
                                                 appThemeMode = themeMode
+                                            }
+                                        },
+                                        onThemeColorPaletteSelected = { palette ->
+                                            if (palette != appColorPalette) {
+                                                AppColorPaletteStore.saveSelectedColorPalette(palette)
+                                                appColorPalette = palette
+                                            }
+                                        },
+                                        onBlockColorPaletteSelected = { palette ->
+                                            if (palette != blockColorPalette) {
+                                                BlockColorPaletteStore.saveSelectedBlockColorPalette(palette)
+                                                blockColorPalette = palette
+                                            }
+                                        },
+                                        onBlockVisualStyleSelected = { style ->
+                                            if (style != blockVisualStyle) {
+                                                BlockVisualStyleStore.saveSelectedBlockVisualStyle(style)
+                                                blockVisualStyle = style
+                                            }
+                                        },
+                                        onNeonPulseSpeedSelected = { speed ->
+                                            if (speed != neonPulseSpeed) {
+                                                NeonPulseSpeedStore.saveSelectedNeonPulseSpeed(speed)
+                                                neonPulseSpeed = speed
+                                            }
+                                        },
+                                        onDragFingerOffsetLevelSelected = { level ->
+                                            if (level != dragFingerOffsetLevel) {
+                                                DragFingerOffsetLevelStore.saveSelectedDragFingerOffsetLevel(level)
+                                                dragFingerOffsetLevel = level
+                                            }
+                                        },
+                                        onInvalidPlacementFeedbackModeSelected = { mode ->
+                                            if (mode != invalidPlacementFeedbackMode) {
+                                                InvalidPlacementFeedbackModeStore
+                                                    .saveSelectedInvalidPlacementFeedbackMode(mode)
+                                                invalidPlacementFeedbackMode = mode
                                             }
                                         },
                                         onBack = { navigation.onBack() },
