@@ -7,9 +7,9 @@ internal enum class DragFingerOffsetLevel(
     val offsetPx: Float,
 ) {
     None(storageValue = "none", offsetPx = 0f),
-    Low(storageValue = "low", offsetPx = 50f),
-    Medium(storageValue = "medium", offsetPx = 150f),
-    High(storageValue = "high", offsetPx = 250f),
+    Low(storageValue = "low", offsetPx = 150f),
+    Medium(storageValue = "medium", offsetPx = 300f),
+    High(storageValue = "high", offsetPx = 450f),
     ;
 
     companion object {

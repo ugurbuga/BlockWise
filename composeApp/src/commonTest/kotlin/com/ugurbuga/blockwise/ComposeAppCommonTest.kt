@@ -20,7 +20,9 @@ import com.ugurbuga.blockwise.blocklogic.ui.dragPreviewBorderColor
 import com.ugurbuga.blockwise.blocklogic.ui.dragPreviewBorderWidth
 import com.ugurbuga.blockwise.blocklogic.ui.GridAxisGeometry
 import com.ugurbuga.blockwise.blocklogic.ui.normalizeDragStartOffsetInContent
+import com.ugurbuga.blockwise.blocklogic.ui.previewClearLinesForPlacement
 import com.ugurbuga.blockwise.blocklogic.ui.previewCellsForOrigins
+import com.ugurbuga.blockwise.blocklogic.ui.resolveAttemptedDraggedOriginAxis
 import com.ugurbuga.blockwise.blocklogic.ui.resolveAttemptedDragOrigin
 import com.ugurbuga.blockwise.blocklogic.ui.resolveAttemptedPointerCellAxis
 import com.ugurbuga.blockwise.blocklogic.ui.resolveValidDragOrigin
@@ -33,6 +35,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.IntSize
 import blockwise.composeapp.generated.resources.Res
+import blockwise.composeapp.generated.resources.board_block_style
+import blockwise.composeapp.generated.resources.board_block_style_flat
+import blockwise.composeapp.generated.resources.block_gap_spacing
+import blockwise.composeapp.generated.resources.block_gap_spacing_high
+import blockwise.composeapp.generated.resources.block_gap_spacing_none
+import blockwise.composeapp.generated.resources.block_style_bubble
+import blockwise.composeapp.generated.resources.block_style_sharp_3d
 import blockwise.composeapp.generated.resources.drag_finger_offset_high
 import blockwise.composeapp.generated.resources.drag_finger_offset_low
 import blockwise.composeapp.generated.resources.invalid_placement_feedback_mode_on_drop
@@ -557,6 +566,33 @@ class ComposeAppCommonTest {
     }
 
     @Test
+    fun `attempted dragged origin axis changes only after the overlay crosses halfway into the next cell`() {
+        val axis = GridAxisGeometry(firstStart = 32f, step = 99f)
+
+        assertEquals(
+            0,
+            resolveAttemptedDraggedOriginAxis(
+                targetContentStart = 32f + 99f * 0.49f,
+                axis = axis,
+            )
+        )
+        assertEquals(
+            1,
+            resolveAttemptedDraggedOriginAxis(
+                targetContentStart = 32f + 99f * 0.51f,
+                axis = axis,
+            )
+        )
+        assertEquals(
+            -1,
+            resolveAttemptedDraggedOriginAxis(
+                targetContentStart = 32f - 99f * 0.6f,
+                axis = axis,
+            )
+        )
+    }
+
+    @Test
     fun `attempted drag origin keeps out of bounds coordinates for validation feedback`() {
         assertEquals(
             CellCoord(-1, 5),
@@ -897,6 +933,87 @@ class ComposeAppCommonTest {
     }
 
     @Test
+    fun `block visual styles support rounded sharp and legacy mappings`() {
+        assertEquals(
+            listOf(
+                BlockVisualStyle.Flat,
+                BlockVisualStyle.Bubble,
+                BlockVisualStyle.Outline,
+                BlockVisualStyle.Sharp3D,
+                BlockVisualStyle.Wood,
+                BlockVisualStyle.LiquidGlass,
+                BlockVisualStyle.Neon,
+            ),
+            SelectableBlockVisualStyles,
+        )
+        assertEquals(BlockVisualStyle.Bubble, BlockVisualStyle.fromStorageValue("rounded_soft_3d"))
+        assertEquals(BlockVisualStyle.Sharp3D, BlockVisualStyle.fromStorageValue("sharp_3d"))
+        assertEquals(BlockVisualStyle.Bubble, BlockVisualStyle.fromStorageValue("soft_3d"))
+        assertEquals(BlockVisualStyle.Sharp3D, BlockVisualStyle.fromStorageValue("strong_3d"))
+        assertEquals(BlockVisualStyle.Sharp3D, BlockVisualStyle.fromStorageValue("pressed"))
+    }
+
+    @Test
+    fun `block gap spacing options stay stable and increase spacing`() {
+        assertEquals(
+            listOf(BlockGapSpacing.None, BlockGapSpacing.Low, BlockGapSpacing.High),
+            SelectableBlockGapSpacings,
+        )
+        assertEquals(BlockGapSpacing.None, BlockGapSpacing.fromStorageValue("none"))
+        assertEquals(BlockGapSpacing.Low, BlockGapSpacing.fromStorageValue("low"))
+        assertEquals(BlockGapSpacing.Low, BlockGapSpacing.fromStorageValue("small"))
+        assertEquals(BlockGapSpacing.Low, BlockGapSpacing.fromStorageValue("medium"))
+        assertEquals(BlockGapSpacing.High, BlockGapSpacing.fromStorageValue("high"))
+        assertEquals(BlockGapSpacing.High, BlockGapSpacing.fromStorageValue("large"))
+        assertEquals(null, BlockGapSpacing.fromStorageValue("dense"))
+        assertTrue(BlockGapSpacing.Low.gapDp.value > BlockGapSpacing.None.gapDp.value)
+        assertTrue(BlockGapSpacing.High.gapDp.value > BlockGapSpacing.Low.gapDp.value)
+    }
+
+    @Test
+    fun `board block style mode defaults to flat and supports storage aliases`() {
+        assertEquals(
+            listOf(BoardBlockStyleMode.Flat, BoardBlockStyleMode.MatchSelectedBlockStyle),
+            SelectableBoardBlockStyleModes,
+        )
+        assertEquals(BoardBlockStyleMode.Flat, BoardBlockStyleMode.fromStorageValue("flat"))
+        assertEquals(BoardBlockStyleMode.Flat, BoardBlockStyleMode.fromStorageValue("always_flat"))
+        assertEquals(
+            BoardBlockStyleMode.MatchSelectedBlockStyle,
+            BoardBlockStyleMode.fromStorageValue("match_selected_block_style"),
+        )
+        assertEquals(
+            BoardBlockStyleMode.MatchSelectedBlockStyle,
+            BoardBlockStyleMode.fromStorageValue("follow_block_style"),
+        )
+        assertEquals(null, BoardBlockStyleMode.fromStorageValue("neon_board"))
+        assertEquals(
+            BlockVisualStyle.Bubble,
+            resolveBoardBlockShapeStyle(BoardBlockStyleMode.Flat, BlockVisualStyle.Bubble),
+        )
+        assertEquals(
+            BlockVisualStyle.Flat,
+            resolveBoardEmptyBlockRenderStyle(BoardBlockStyleMode.Flat, BlockVisualStyle.Bubble),
+        )
+        assertEquals(
+            BlockVisualStyle.Bubble,
+            resolveBoardFilledBlockRenderStyle(BoardBlockStyleMode.Flat, BlockVisualStyle.Bubble),
+        )
+        assertEquals(
+            BlockVisualStyle.Sharp3D,
+            resolveBoardEmptyBlockRenderStyle(BoardBlockStyleMode.MatchSelectedBlockStyle, BlockVisualStyle.Sharp3D),
+        )
+        assertEquals(
+            BlockVisualStyle.Sharp3D,
+            resolveBoardFilledBlockRenderStyle(BoardBlockStyleMode.MatchSelectedBlockStyle, BlockVisualStyle.Sharp3D),
+        )
+        assertEquals(
+            BlockVisualStyle.Sharp3D,
+            resolveBoardBlockShapeStyle(BoardBlockStyleMode.MatchSelectedBlockStyle, BlockVisualStyle.Sharp3D),
+        )
+    }
+
+    @Test
     fun `drag preview only snaps to origins that satisfy the full rule set`() {
         val grid = Grid(
             size = GridSize(4),
@@ -976,6 +1093,52 @@ class ComposeAppCommonTest {
     }
 
     @Test
+    fun `drag clear preview reports rows and columns that would clear on drop`() {
+        val grid = Grid(
+            size = GridSize(4),
+            cells = listOf(
+                listOf(Cell(BlockColor.Red), Cell(BlockColor.Blue), Cell(BlockColor.Green), null),
+                listOf(null, null, null, Cell(BlockColor.Yellow)),
+                listOf(null, null, null, Cell(BlockColor.Blue)),
+                listOf(null, null, null, Cell(BlockColor.Red)),
+            ),
+        )
+
+        val preview = previewClearLinesForPlacement(
+            grid = grid,
+            piece = Piece(shape = Shapes.Single, color = BlockColor.Yellow),
+            origin = CellCoord(3, 0),
+            rules = resolveGameConfig(GridSize(4), Difficulty.Easy).rules,
+        )
+
+        assertEquals(setOf(0), preview.rowIndices)
+        assertEquals(setOf(3), preview.colIndices)
+    }
+
+    @Test
+    fun `drag clear preview stays empty for invalid placements`() {
+        val grid = Grid(
+            size = GridSize(4),
+            cells = listOf(
+                listOf(Cell(BlockColor.Red), null, null, null),
+                listOf(null, null, null, null),
+                listOf(null, null, null, null),
+                listOf(null, null, null, null),
+            ),
+        )
+
+        val preview = previewClearLinesForPlacement(
+            grid = grid,
+            piece = Piece(shape = Shapes.Single, color = BlockColor.Blue),
+            origin = CellCoord(0, 0),
+            rules = resolveGameConfig(GridSize(4), Difficulty.Easy).rules,
+        )
+
+        assertEquals(emptySet(), preview.rowIndices)
+        assertEquals(emptySet(), preview.colIndices)
+    }
+
+    @Test
     fun `neon pulse speeds expose stable persisted values and timing order`() {
         assertEquals(listOf(NeonPulseSpeed.Slow, NeonPulseSpeed.Normal, NeonPulseSpeed.Fast), SelectableNeonPulseSpeeds)
         assertEquals(NeonPulseSpeed.Slow, NeonPulseSpeed.fromStorageValue("slow"))
@@ -1031,8 +1194,15 @@ class ComposeAppCommonTest {
     fun `localized resources include language and gameplay settings labels`() {
         assertEquals("English", localizedGetString(AppLanguage.English, Res.string.language_english))
         assertEquals("Русский", localizedGetString(AppLanguage.Russian, Res.string.language_russian))
+        assertEquals("Bubble", localizedGetString(AppLanguage.English, Res.string.block_style_bubble))
+        assertEquals("Köşeli 3D", localizedGetString(AppLanguage.Turkish, Res.string.block_style_sharp_3d))
+        assertEquals("Board Block Style", localizedGetString(AppLanguage.English, Res.string.board_block_style))
+        assertEquals("Всегда плоский", localizedGetString(AppLanguage.Russian, Res.string.board_block_style_flat))
+        assertEquals("Block Gap", localizedGetString(AppLanguage.English, Res.string.block_gap_spacing))
+        assertEquals("Большой", localizedGetString(AppLanguage.Russian, Res.string.block_gap_spacing_high))
         assertEquals("Neon Pulse Speed", localizedGetString(AppLanguage.English, Res.string.neon_pulse_speed))
         assertEquals("Быстро", localizedGetString(AppLanguage.Russian, Res.string.neon_pulse_speed_fast))
+        assertEquals("Boşluksuz", localizedGetString(AppLanguage.Turkish, Res.string.block_gap_spacing_none))
         assertEquals("Low", localizedGetString(AppLanguage.English, Res.string.drag_finger_offset_low))
         assertEquals("Çok", localizedGetString(AppLanguage.Turkish, Res.string.drag_finger_offset_high))
         assertEquals(

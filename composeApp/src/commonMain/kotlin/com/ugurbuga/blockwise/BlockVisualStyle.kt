@@ -4,7 +4,10 @@ import androidx.compose.runtime.staticCompositionLocalOf
 
 internal enum class BlockVisualStyle(val storageValue: String) {
     Flat("flat"),
-    Raised3D("raised_3d"),
+    Bubble("bubble"),
+    Outline("outline"),
+    Sharp3D("sharp_3d"),
+    Wood("wood"),
     LiquidGlass("liquid_glass"),
     Neon("neon"),
     ;
@@ -14,7 +17,14 @@ internal enum class BlockVisualStyle(val storageValue: String) {
             return when (value) {
                 null -> null
                 "flat" -> Flat
-                "soft_3d", "strong_3d", "pressed", "raised_3d" -> Raised3D
+                "bubble", "candy" -> Bubble
+                "outline", "wireframe" -> Outline
+                "soft_3d", "rounded_soft_3d" -> Bubble
+                "neumorphism", "soft_ui", "softui" -> Flat
+                "clay", "claymorphism" -> Flat
+                "pressed", "raised_3d" -> Sharp3D
+                "strong_3d", "sharp_3d" -> Sharp3D
+                "wood", "wooden" -> Wood
                 "glossy", "liquid_glass" -> LiquidGlass
                 "neon" -> Neon
                 else -> entries.firstOrNull { it.storageValue == value }
@@ -23,7 +33,15 @@ internal enum class BlockVisualStyle(val storageValue: String) {
     }
 }
 
-internal val SelectableBlockVisualStyles = BlockVisualStyle.entries
+internal val SelectableBlockVisualStyles = listOf(
+    BlockVisualStyle.Flat,
+    BlockVisualStyle.Bubble,
+    BlockVisualStyle.Outline,
+    BlockVisualStyle.Sharp3D,
+    BlockVisualStyle.Wood,
+    BlockVisualStyle.LiquidGlass,
+    BlockVisualStyle.Neon,
+)
 
 internal object BlockVisualStyleStore {
     private const val BLOCK_VISUAL_STYLE_KEY = "block_visual_style"

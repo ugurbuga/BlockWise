@@ -6,26 +6,34 @@ import kotlin.test.assertEquals
 class DesktopWindowSizeStoreJvmTest {
 
     @Test
-    fun `desktop window size sanitization falls back to defaults when values are missing`() {
+    fun `desktop window bounds sanitization falls back to defaults when values are missing`() {
         assertEquals(
-            DesktopWindowSize(widthDp = 1180, heightDp = 860),
-            sanitizeDesktopWindowSize(widthDp = null, heightDp = null),
+            DesktopWindowBounds(widthDp = 1180, heightDp = 860),
+            sanitizeDesktopWindowBounds(widthDp = null, heightDp = null),
         )
     }
 
     @Test
-    fun `desktop window size sanitization clamps overly small values`() {
+    fun `desktop window bounds sanitization preserves exact positive size without min clamp`() {
         assertEquals(
-            DesktopWindowSize(widthDp = 900, heightDp = 680),
-            sanitizeDesktopWindowSize(widthDp = 320, heightDp = 200),
+            DesktopWindowBounds(widthDp = 320, heightDp = 200),
+            sanitizeDesktopWindowBounds(widthDp = 320, heightDp = 200),
         )
     }
 
     @Test
-    fun `desktop window size sanitization preserves valid saved size`() {
+    fun `desktop window bounds sanitization preserves valid saved size and position`() {
         assertEquals(
-            DesktopWindowSize(widthDp = 1366, heightDp = 900),
-            sanitizeDesktopWindowSize(widthDp = 1366, heightDp = 900),
+            DesktopWindowBounds(widthDp = 1366, heightDp = 900, positionXDp = 240, positionYDp = 96),
+            sanitizeDesktopWindowBounds(widthDp = 1366, heightDp = 900, positionXDp = 240, positionYDp = 96),
+        )
+    }
+
+    @Test
+    fun `desktop window bounds sanitization drops partial position values`() {
+        assertEquals(
+            DesktopWindowBounds(widthDp = 1180, heightDp = 860, positionXDp = null, positionYDp = null),
+            sanitizeDesktopWindowBounds(widthDp = null, heightDp = null, positionXDp = 120, positionYDp = null),
         )
     }
 }

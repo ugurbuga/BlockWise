@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private const val CLEAR_ANIMATION_DURATION_MS = 220L
 
 class BlockLogicViewModel(
     initialSize: GridSize = GridSize(10),
@@ -129,12 +128,14 @@ class BlockLogicViewModel(
         val newScore = state.score + 1 + clearedScore
         val remainingMoves = state.movesRemaining?.minus(1)?.coerceAtLeast(0)
 
-        val newPieces = state.pieces.toMutableList().also { it.removeAt(resolvedIndex) }
-        if (newPieces.size < 3) {
-            while (newPieces.size < 3) newPieces += GameEngine.randomPiece(availableShapes = config.availableShapes)
+        val remainingPieces = state.pieces.toMutableList().also { it.removeAt(resolvedIndex) }
+        val replenishedPieces = remainingPieces.toMutableList().also { pieces ->
+            while (pieces.size < 3) {
+                pieces += GameEngine.randomPiece(availableShapes = config.availableShapes)
+            }
         }
 
-        val isGameOver = (remainingMoves == 0) || !GameEngine.hasAnyValidMove(result.grid, newPieces, rules)
+        val isGameOver = (remainingMoves == 0) || !GameEngine.hasAnyValidMove(result.grid, replenishedPieces, rules)
         val hasClearAnimation = result.clearedRowIndices.isNotEmpty() || result.clearedColIndices.isNotEmpty()
 
         if (!hasClearAnimation) {
@@ -146,7 +147,7 @@ class BlockLogicViewModel(
                 grid = result.grid,
                 score = newScore,
                 movesRemaining = remainingMoves,
-                pieces = newPieces,
+                pieces = replenishedPieces,
                 selectedPieceIndex = null,
                 validOrigins = emptySet(),
                 validCells = emptySet(),
@@ -162,7 +163,7 @@ class BlockLogicViewModel(
             grid = result.placedGrid,
             score = newScore,
             movesRemaining = remainingMoves,
-            pieces = newPieces,
+            pieces = emptyList(),
             selectedPieceIndex = null,
             validOrigins = emptySet(),
             validCells = emptySet(),
@@ -176,6 +177,7 @@ class BlockLogicViewModel(
             delay(CLEAR_ANIMATION_DURATION_MS)
             _uiState.value = _uiState.value.copy(
                 grid = result.grid,
+                pieces = replenishedPieces,
                 clearingRows = emptySet(),
                 clearingCols = emptySet(),
                 isAnimatingClear = false,

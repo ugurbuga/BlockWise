@@ -19,10 +19,16 @@ output-metadata.json
 
 # IntelliJ
 *.iml
-.idea/
+.idea/*
 misc.xml
 deploymentTargetDropDown.xml
 render.experimental.xml
+
+# Share run/debug configurations with the team
+!.idea/runConfigurations/
+!.idea/runConfigurations/*.xml
+!.run/
+!.run/*.run.xml
 
 # Keystore files
 *.jks

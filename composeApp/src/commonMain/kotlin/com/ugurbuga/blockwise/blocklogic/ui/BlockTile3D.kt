@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -18,13 +19,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ugurbuga.blockwise.BlockVisualStyle
 import com.ugurbuga.blockwise.LocalBlockVisualStyle
 import com.ugurbuga.blockwise.LocalNeonPulseSpeed
+import com.ugurbuga.blockwise.NeonPulseSpeed
 
 internal fun Color.lighten(amount: Float): Color = lerpTo(Color.White, amount)
 
@@ -96,18 +110,75 @@ private fun blockTileStyleSpec(
                 neonGlowAlpha = 0f,
             )
 
-            BlockVisualStyle.Raised3D -> BlockTileStyleSpec(
-                topLighten = 0.02f,
-                bottomDarken = 0.18f,
+            BlockVisualStyle.Bubble -> BlockTileStyleSpec(
+                topLighten = 0.06f,
+                bottomDarken = 0.14f,
+                fillAlpha = 1f,
+                useSolidBase = false,
+                topHighlightAlpha = if (pressed) 0.06f else 0.1f,
+                leftHighlightAlpha = if (pressed) 0.05f else 0.08f,
+                bottomShadeAlpha = if (pressed) 0.12f else 0.1f,
+                rightShadeAlpha = if (pressed) 0.1f else 0.08f,
+                diagonalGlowAlpha = if (pressed) 0.08f else 0.12f,
+                glossAlpha = if (pressed) 0.04f else 0.08f,
+                borderDarken = 0.2f,
+                borderLighten = 0f,
+                useLightBorder = false,
+                shadowAlpha = 0f,
+                elevationMultiplier = 0f,
+                neonGlowAlpha = 0f,
+            )
+
+            BlockVisualStyle.Outline -> BlockTileStyleSpec(
+                topLighten = 0f,
+                bottomDarken = 0f,
+                fillAlpha = if (pressed) 0.06f else 0.04f,
+                useSolidBase = true,
+                topHighlightAlpha = 0f,
+                leftHighlightAlpha = 0f,
+                bottomShadeAlpha = 0f,
+                rightShadeAlpha = 0f,
+                diagonalGlowAlpha = 0f,
+                glossAlpha = 0f,
+                borderDarken = if (pressed) 0.2f else 0.26f,
+                borderLighten = 0f,
+                useLightBorder = false,
+                shadowAlpha = 0f,
+                elevationMultiplier = 0f,
+                neonGlowAlpha = 0f,
+            )
+
+            BlockVisualStyle.Sharp3D -> BlockTileStyleSpec(
+                topLighten = 0.01f,
+                bottomDarken = 0.24f,
+                fillAlpha = 1f,
+                useSolidBase = false,
+                topHighlightAlpha = if (pressed) 0.03f else 0.06f,
+                leftHighlightAlpha = if (pressed) 0.02f else 0.04f,
+                bottomShadeAlpha = if (pressed) 0.18f else 0.14f,
+                rightShadeAlpha = if (pressed) 0.16f else 0.12f,
+                diagonalGlowAlpha = if (pressed) 0.04f else 0.08f,
+                glossAlpha = 0f,
+                borderDarken = 0.32f,
+                borderLighten = 0f,
+                useLightBorder = false,
+                shadowAlpha = 0f,
+                elevationMultiplier = 0f,
+                neonGlowAlpha = 0f,
+            )
+
+            BlockVisualStyle.Wood -> BlockTileStyleSpec(
+                topLighten = 0.04f,
+                bottomDarken = 0.2f,
                 fillAlpha = 1f,
                 useSolidBase = false,
                 topHighlightAlpha = if (pressed) 0.04f else 0.07f,
                 leftHighlightAlpha = if (pressed) 0.03f else 0.05f,
-                bottomShadeAlpha = if (pressed) 0.16f else 0.12f,
-                rightShadeAlpha = if (pressed) 0.14f else 0.1f,
-                diagonalGlowAlpha = 0.08f,
-                glossAlpha = 0f,
-                borderDarken = 0.26f,
+                bottomShadeAlpha = if (pressed) 0.14f else 0.12f,
+                rightShadeAlpha = if (pressed) 0.12f else 0.1f,
+                diagonalGlowAlpha = if (pressed) 0.06f else 0.1f,
+                glossAlpha = if (pressed) 0.03f else 0.06f,
+                borderDarken = 0.28f,
                 borderLighten = 0f,
                 useLightBorder = false,
                 shadowAlpha = 0f,
@@ -175,22 +246,79 @@ private fun blockTileStyleSpec(
             neonGlowAlpha = 0f,
         )
 
-        BlockVisualStyle.Raised3D -> BlockTileStyleSpec(
-            topLighten = if (pressed) 0.1f else 0.2f,
-            bottomDarken = if (pressed) 0.12f else 0.2f,
+        BlockVisualStyle.Bubble -> BlockTileStyleSpec(
+            topLighten = if (pressed) -0.02f else 0.06f,
+            bottomDarken = if (pressed) 0.22f else 0.16f,
             fillAlpha = 1f,
             useSolidBase = false,
-            topHighlightAlpha = if (pressed) 0.12f else 0.22f,
-            leftHighlightAlpha = if (pressed) 0.07f else 0.14f,
-            bottomShadeAlpha = if (pressed) 0.18f else 0.26f,
-            rightShadeAlpha = if (pressed) 0.14f else 0.2f,
-            diagonalGlowAlpha = if (pressed) 0.08f else 0.12f,
-            glossAlpha = if (pressed) 0.06f else 0.1f,
-            borderDarken = if (pressed) 0.28f else 0.4f,
+            topHighlightAlpha = if (pressed) 0.12f else 0.2f,
+            leftHighlightAlpha = if (pressed) 0.08f else 0.14f,
+            bottomShadeAlpha = if (pressed) 0.12f else 0.08f,
+            rightShadeAlpha = if (pressed) 0.1f else 0.07f,
+            diagonalGlowAlpha = if (pressed) 0.14f else 0.2f,
+            glossAlpha = if (pressed) 0.12f else 0.22f,
+            borderDarken = 0.18f,
+            borderLighten = if (pressed) 0.06f else 0.14f,
+            useLightBorder = true,
+            shadowAlpha = if (pressed) 0.08f else 0.14f,
+            elevationMultiplier = if (pressed) 0.28f else 0.5f,
+            neonGlowAlpha = 0f,
+        )
+
+        BlockVisualStyle.Outline -> BlockTileStyleSpec(
+            topLighten = 0f,
+            bottomDarken = 0f,
+            fillAlpha = if (pressed) 0.08f else 0.05f,
+            useSolidBase = true,
+            topHighlightAlpha = 0f,
+            leftHighlightAlpha = 0f,
+            bottomShadeAlpha = 0f,
+            rightShadeAlpha = 0f,
+            diagonalGlowAlpha = 0f,
+            glossAlpha = 0f,
+            borderDarken = 0f,
+            borderLighten = if (pressed) 0.22f else 0.3f,
+            useLightBorder = true,
+            shadowAlpha = 0f,
+            elevationMultiplier = 0f,
+            neonGlowAlpha = 0f,
+        )
+
+        BlockVisualStyle.Sharp3D -> BlockTileStyleSpec(
+            topLighten = if (pressed) 0.06f else 0.14f,
+            bottomDarken = if (pressed) 0.18f else 0.28f,
+            fillAlpha = 1f,
+            useSolidBase = false,
+            topHighlightAlpha = if (pressed) 0.09f else 0.16f,
+            leftHighlightAlpha = if (pressed) 0.04f else 0.08f,
+            bottomShadeAlpha = if (pressed) 0.22f else 0.32f,
+            rightShadeAlpha = if (pressed) 0.18f else 0.26f,
+            diagonalGlowAlpha = if (pressed) 0.06f else 0.12f,
+            glossAlpha = if (pressed) 0.03f else 0.06f,
+            borderDarken = if (pressed) 0.36f else 0.48f,
             borderLighten = 0f,
             useLightBorder = false,
-            shadowAlpha = if (pressed) 0.1f else 0.22f,
-            elevationMultiplier = if (pressed) 0.4f else 0.9f,
+            shadowAlpha = if (pressed) 0.12f else 0.24f,
+            elevationMultiplier = if (pressed) 0.46f else 1f,
+            neonGlowAlpha = 0f,
+        )
+
+        BlockVisualStyle.Wood -> BlockTileStyleSpec(
+            topLighten = if (pressed) -0.01f else 0.03f,
+            bottomDarken = if (pressed) 0.26f else 0.22f,
+            fillAlpha = 1f,
+            useSolidBase = false,
+            topHighlightAlpha = if (pressed) 0.06f else 0.09f,
+            leftHighlightAlpha = if (pressed) 0.04f else 0.07f,
+            bottomShadeAlpha = if (pressed) 0.16f else 0.12f,
+            rightShadeAlpha = if (pressed) 0.14f else 0.11f,
+            diagonalGlowAlpha = if (pressed) 0.06f else 0.1f,
+            glossAlpha = if (pressed) 0.04f else 0.08f,
+            borderDarken = 0.3f,
+            borderLighten = 0f,
+            useLightBorder = false,
+            shadowAlpha = if (pressed) 0.12f else 0.2f,
+            elevationMultiplier = if (pressed) 0.3f else 0.5f,
             neonGlowAlpha = 0f,
         )
 
@@ -244,13 +372,19 @@ internal fun BlockTile3D(
     recessed: Boolean = false,
     elevation: Dp = if (recessed) 0.dp else 4.dp,
     interaction: BlockTileInteraction = BlockTileInteraction.Normal,
+    renderStyleOverride: BlockVisualStyle? = null,
+    shapeStyleOverride: BlockVisualStyle? = null,
     content: @Composable BoxScope.() -> Unit = {},
 ) {
-    val style = LocalBlockVisualStyle.current
+    val style = renderStyleOverride ?: LocalBlockVisualStyle.current
+    val shapeStyle = shapeStyleOverride ?: style
     val neonPulseSpeed = LocalNeonPulseSpeed.current
-    val adjustedCornerRadius = when (style) {
+    val adjustedCornerRadius = when (shapeStyle) {
         BlockVisualStyle.Flat -> cornerRadius * 0.9f
-        BlockVisualStyle.Raised3D -> cornerRadius
+        BlockVisualStyle.Bubble -> cornerRadius * 2.35f
+        BlockVisualStyle.Outline -> cornerRadius * 1.05f
+        BlockVisualStyle.Sharp3D -> cornerRadius * 0.42f
+        BlockVisualStyle.Wood -> cornerRadius * 1.1f
         BlockVisualStyle.LiquidGlass -> cornerRadius * 1.45f
         BlockVisualStyle.Neon -> cornerRadius * 0.65f
     }
@@ -260,12 +394,19 @@ internal fun BlockTile3D(
         recessed = recessed,
         interaction = interaction,
     )
-    val resolvedBorderColor = if (borderColor != Color.Transparent) {
+    val resolvedBorderColor = if (style == BlockVisualStyle.Outline) {
+        fillColor.darken(0.46f).copy(alpha = 0.92f)
+    } else if (borderColor != Color.Transparent) {
         borderColor
     } else if (spec.useLightBorder) {
         fillColor.lighten(spec.borderLighten)
     } else {
         fillColor.darken(spec.borderDarken)
+    }
+    val resolvedBorderWidth = if (style == BlockVisualStyle.Outline) {
+        maxOf(borderWidth, 2.dp)
+    } else {
+        borderWidth
     }
     val baseBrush = Brush.linearGradient(
         colors = if (spec.useSolidBase) {
@@ -301,6 +442,28 @@ internal fun BlockTile3D(
         ),
         label = "neon-pulse-intensity",
     )?.value ?: 1f
+    val neonFastShimmerProgress = neonTransition
+        ?.takeIf { style == BlockVisualStyle.Neon && neonPulseSpeed == NeonPulseSpeed.Fast }
+        ?.animateFloat(
+            initialValue = -1f,
+            targetValue = 1.15f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 460, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+            label = "neon-fast-shimmer",
+        )?.value
+    val neonBorderTravelProgress = neonTransition
+        ?.takeIf { style == BlockVisualStyle.Neon }
+        ?.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = neonPulseSpeed.durationMillis, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+            label = "neon-border-travel",
+        )?.value
     val neonPulseProgress = if (style == BlockVisualStyle.Neon) {
         ((neonPulseIntensity - NEON_PULSE_MIN_INTENSITY) /
             (NEON_PULSE_MAX_INTENSITY - NEON_PULSE_MIN_INTENSITY)).coerceIn(0f, 1f)
@@ -356,6 +519,35 @@ internal fun BlockTile3D(
             Color.Transparent,
         )
     )
+
+    val woodGrainBrush = if (style == BlockVisualStyle.Wood) {
+        Brush.linearGradient(
+            colors = listOf(
+                Color.Black.copy(alpha = 0.2f),
+                Color.Transparent,
+                Color.Black.copy(alpha = 0.12f),
+                Color.Transparent,
+                Color.Black.copy(alpha = 0.16f),
+                Color.Transparent,
+                Color.Black.copy(alpha = 0.1f),
+                Color.Transparent,
+            )
+        )
+    } else {
+        null
+    }
+    val woodSheenBrush = if (style == BlockVisualStyle.Wood) {
+        Brush.verticalGradient(
+            colors = listOf(
+                Color.White.copy(alpha = 0.22f),
+                Color.Transparent,
+                Color.White.copy(alpha = 0.12f),
+                Color.Transparent,
+            )
+        )
+    } else {
+        null
+    }
     val neonGlowBrush = Brush.radialGradient(
         colors = listOf(
             fillColor.lighten(0.34f).copy(
@@ -381,29 +573,70 @@ internal fun BlockTile3D(
             Color.Transparent,
         )
     )
+    val neonFastShimmerBrush = Brush.linearGradient(
+        colors = listOf(
+            Color.Transparent,
+            Color.White.copy(alpha = 0.12f + neonPulseProgress * 0.05f),
+            fillColor.lighten(0.28f).copy(alpha = 0.1f + neonPulseProgress * 0.06f),
+            Color.Transparent,
+        )
+    )
     val pressedScaleX = if (interaction == BlockTileInteraction.Pressed && style != BlockVisualStyle.Flat) 1.01f else 1f
     val pressedScaleY = if (interaction == BlockTileInteraction.Pressed && style != BlockVisualStyle.Flat) 0.95f else 1f
+    val density = LocalDensity.current
+
+    fun DrawScope.neonSnakeSegmentPath(
+        measure: PathMeasure,
+        out: Path,
+        startDistance: Float,
+        endDistance: Float,
+        length: Float,
+    ) {
+        out.reset()
+        if (length <= 0f) return
+        val clampedStart = startDistance.coerceIn(0f, length)
+        val clampedEnd = endDistance.coerceIn(0f, length)
+        if (clampedEnd > clampedStart) {
+            measure.getSegment(clampedStart, clampedEnd, out)
+        }
+    }
 
     Box(
         modifier = modifier
-            .graphicsLayer {
-                scaleX = pressedScaleX
-                scaleY = pressedScaleY
-            }
             .shadow(
-                elevation = elevation * when {
-                    recessed -> 0f
-                    style == BlockVisualStyle.Neon -> spec.elevationMultiplier * (1f + neonPulseProgress * 2f)
-                    else -> spec.elevationMultiplier
-                },
+                elevation = elevation * spec.elevationMultiplier,
                 shape = shape,
+                clip = false,
                 ambientColor = shadowColor,
                 spotColor = shadowColor,
             )
             .clip(shape)
             .background(baseBrush)
-            .border(borderWidth, resolvedBorderColor, shape)
+            .border(resolvedBorderWidth, resolvedBorderColor, shape)
     ) {
+        if (style == BlockVisualStyle.Wood) {
+            woodGrainBrush?.let { brush ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight()
+                        .graphicsLayer { alpha = 0.72f }
+                        .clip(shape)
+                        .background(brush)
+                )
+            }
+            woodSheenBrush?.let { brush ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.5f)
+                        .align(Alignment.TopCenter)
+                        .graphicsLayer { alpha = 0.86f }
+                        .clip(shape)
+                        .background(brush)
+                )
+            }
+        }
         if (style == BlockVisualStyle.Neon && spec.neonGlowAlpha > 0f) {
             Box(
                 modifier = Modifier
@@ -435,6 +668,21 @@ internal fun BlockTile3D(
                     .clip(RoundedCornerShape(adjustedCornerRadius * 0.82f))
                     .background(neonSheenBrush)
             )
+            neonFastShimmerProgress?.let { shimmerProgress ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.5f)
+                        .fillMaxHeight(1.14f)
+                        .align(Alignment.CenterStart)
+                        .graphicsLayer {
+                            translationX = -54f + shimmerProgress * 108f
+                            rotationZ = -9f
+                            alpha = 0.22f + neonPulseProgress * 0.1f
+                        }
+                        .clip(RoundedCornerShape(adjustedCornerRadius * 0.8f))
+                        .background(neonFastShimmerBrush)
+                )
+            }
         }
         Box(
             modifier = Modifier
@@ -559,6 +807,111 @@ internal fun BlockTile3D(
             )
         }
         if (style == BlockVisualStyle.Neon) {
+            val neonFrameColor = fillColor.lighten(0.42f)
+            val neonFrameTravel = neonBorderTravelProgress ?: 0f
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight()
+                    .drawWithCache {
+                        val cornerRadiusPx = with(density) { adjustedCornerRadius.toPx() }
+                        val strokePx = with(density) { (borderWidth * (1.5f + neonPulseProgress * 0.65f)).toPx() }
+                        val outerStrokePx = strokePx * 2.35f
+                        val baseBorderAlpha = (0.84f + neonPulseProgress * 0.16f).coerceIn(0f, 0.98f)
+
+                        val baseBrush = Brush.linearGradient(
+                            colors = listOf(
+                                neonFrameColor.copy(alpha = baseBorderAlpha),
+                                neonFrameColor.lighten(0.06f).copy(alpha = (baseBorderAlpha * 0.92f).coerceIn(0f, 1f)),
+                            ),
+                            start = Offset.Zero,
+                            end = Offset(size.width, size.height),
+                        )
+
+                        val measure = PathMeasure()
+                        val framePath = Path()
+                        val segmentPath = Path()
+                        val segmentGlowPath = Path()
+                        onDrawWithContent {
+                            drawContent()
+
+                            val inset = outerStrokePx * 0.5f
+                            val rect = Rect(
+                                left = inset,
+                                top = inset,
+                                right = size.width - inset,
+                                bottom = size.height - inset,
+                            )
+                            val radius = cornerRadiusPx.coerceAtMost(minOf(rect.width, rect.height) * 0.5f)
+
+                            framePath.reset()
+                            framePath.addRoundRect(
+                                RoundRect(
+                                    left = rect.left,
+                                    top = rect.top,
+                                    right = rect.right,
+                                    bottom = rect.bottom,
+                                    cornerRadius = CornerRadius(radius, radius),
+                                )
+                            )
+                            measure.setPath(framePath, false)
+                            val length = measure.length
+                            if (length <= 0f) return@onDrawWithContent
+
+                            drawPath(
+                                path = framePath,
+                                brush = baseBrush,
+                                style = Stroke(width = outerStrokePx, cap = StrokeCap.Round),
+                            )
+
+                            val head = (neonFrameTravel * length) % length
+                            val segmentLen = (length * 0.22f).coerceAtLeast(24f)
+                            val tail = head - segmentLen
+
+                            fun drawSegment(start: Float, end: Float) {
+                                neonSnakeSegmentPath(
+                                    measure = measure,
+                                    out = segmentPath,
+                                    startDistance = start,
+                                    endDistance = end,
+                                    length = length,
+                                )
+                                if (!segmentPath.isEmpty) {
+                                    val highlightBrush = Brush.linearGradient(
+                                        colors = listOf(
+                                            Color.Transparent,
+                                            Color.White.copy(alpha = 0.98f),
+                                            neonFrameColor.copy(alpha = 0.96f),
+                                            Color.Transparent,
+                                        ),
+                                        start = Offset(rect.left, rect.top),
+                                        end = Offset(rect.right, rect.bottom),
+                                    )
+                                    segmentGlowPath.reset()
+                                    segmentGlowPath.addPath(segmentPath)
+
+                                    drawPath(
+                                        path = segmentGlowPath,
+                                        color = neonFrameColor.copy(alpha = (0.48f + neonPulseProgress * 0.26f).coerceIn(0f, 0.88f)),
+                                        style = Stroke(width = outerStrokePx * 1.55f, cap = StrokeCap.Round),
+                                    )
+                                    drawPath(
+                                        path = segmentPath,
+                                        brush = highlightBrush,
+                                        style = Stroke(width = strokePx * 1.25f, cap = StrokeCap.Round),
+                                    )
+                                }
+                            }
+
+                            if (tail >= 0f) {
+                                drawSegment(tail, head)
+                            } else {
+                                drawSegment(length + tail, length)
+                                drawSegment(0f, head)
+                            }
+                        }
+                    }
+            )
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

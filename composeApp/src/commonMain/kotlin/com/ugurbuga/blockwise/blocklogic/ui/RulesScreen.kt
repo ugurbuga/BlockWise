@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.ugurbuga.blockwise.LocalBlockGapSpacing
 import com.ugurbuga.blockwise.localizedStringResource as stringResource
 import com.ugurbuga.blockwise.blocklogic.domain.BlockColor
 import com.ugurbuga.blockwise.blocklogic.domain.Difficulty
@@ -237,15 +238,16 @@ private fun PieceSample(piece: Piece) {
 
 @Composable
 private fun PiecePreviewSmall(piece: Piece) {
+    val gap = LocalBlockGapSpacing.current.gapDp
     val maxDx = piece.shape.cells.maxOf { it.dx }
     val maxDy = piece.shape.cells.maxOf { it.dy }
     val width = maxDx + 1
     val height = maxDy + 1
     val cellSize = 14.dp
 
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(gap)) {
         for (y in 0 until height) {
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
                 for (x in 0 until width) {
                     val filled = piece.shape.cells.any { it.dx == x && it.dy == y }
                     BlockTile3D(

@@ -6,16 +6,26 @@ import org.jetbrains.compose.resources.StringResource
 
 import blockwise.composeapp.generated.resources.Res
 import blockwise.composeapp.generated.resources.back
+import blockwise.composeapp.generated.resources.board_block_style
+import blockwise.composeapp.generated.resources.board_block_style_flat
+import blockwise.composeapp.generated.resources.board_block_style_match_selected
 import blockwise.composeapp.generated.resources.block_color_palette
 import blockwise.composeapp.generated.resources.block_palette_candy
 import blockwise.composeapp.generated.resources.block_palette_classic
 import blockwise.composeapp.generated.resources.block_palette_earth
 import blockwise.composeapp.generated.resources.block_palette_neon
 import blockwise.composeapp.generated.resources.block_style
+import blockwise.composeapp.generated.resources.block_style_bubble
 import blockwise.composeapp.generated.resources.block_style_flat
+import blockwise.composeapp.generated.resources.block_style_outline
 import blockwise.composeapp.generated.resources.block_style_liquid_glass
 import blockwise.composeapp.generated.resources.block_style_neon
-import blockwise.composeapp.generated.resources.block_style_raised
+import blockwise.composeapp.generated.resources.block_style_sharp_3d
+import blockwise.composeapp.generated.resources.block_style_wood
+import blockwise.composeapp.generated.resources.block_gap_spacing
+import blockwise.composeapp.generated.resources.block_gap_spacing_none
+import blockwise.composeapp.generated.resources.block_gap_spacing_low
+import blockwise.composeapp.generated.resources.block_gap_spacing_high
 import blockwise.composeapp.generated.resources.color_palette
 import blockwise.composeapp.generated.resources.color_palette_aurora
 import blockwise.composeapp.generated.resources.color_palette_classic
@@ -322,14 +332,14 @@ internal fun localizedGetString(language: AppLanguage, resource: StringResource,
             AppLanguage.Arabic -> "مسطّح"
         }
 
-        Res.string.block_style_raised -> when (language) {
-            AppLanguage.English -> "Raised 3D"
-            AppLanguage.Turkish -> "Yükseltilmiş 3D"
-            AppLanguage.Spanish -> "3D elevado"
-            AppLanguage.French -> "3D surélevé"
-            AppLanguage.German -> "Erhabenes 3D"
-            AppLanguage.Russian -> "Объёмный 3D"
-            AppLanguage.Arabic -> "ثلاثي الأبعاد المرتفع"
+        Res.string.block_style_sharp_3d -> when (language) {
+            AppLanguage.English -> "Sharp 3D"
+            AppLanguage.Turkish -> "Köşeli 3D"
+            AppLanguage.Spanish -> "3D angular"
+            AppLanguage.French -> "3D anguleux"
+            AppLanguage.German -> "Kantiges 3D"
+            AppLanguage.Russian -> "Угловатый 3D"
+            AppLanguage.Arabic -> "ثلاثي الأبعاد الحاد"
         }
 
         Res.string.block_style_liquid_glass -> when (language) {
@@ -350,6 +360,76 @@ internal fun localizedGetString(language: AppLanguage, resource: StringResource,
             AppLanguage.German -> "Neon"
             AppLanguage.Russian -> "Неон"
             AppLanguage.Arabic -> "نيون"
+        }
+
+        Res.string.board_block_style -> when (language) {
+            AppLanguage.English -> "Board Block Style"
+            AppLanguage.Turkish -> "Board Blok Stili"
+            AppLanguage.Spanish -> "Estilo de bloque del tablero"
+            AppLanguage.French -> "Style des blocs du plateau"
+            AppLanguage.German -> "Blockstil auf dem Brett"
+            AppLanguage.Russian -> "Стиль блоков на поле"
+            AppLanguage.Arabic -> "نمط كتل اللوحة"
+        }
+
+        Res.string.board_block_style_flat -> when (language) {
+            AppLanguage.English -> "Always Flat"
+            AppLanguage.Turkish -> "Her zaman düz"
+            AppLanguage.Spanish -> "Siempre plano"
+            AppLanguage.French -> "Toujours plat"
+            AppLanguage.German -> "Immer flach"
+            AppLanguage.Russian -> "Всегда плоский"
+            AppLanguage.Arabic -> "مسطّح دائمًا"
+        }
+
+        Res.string.board_block_style_match_selected -> when (language) {
+            AppLanguage.English -> "Match selected block style"
+            AppLanguage.Turkish -> "Seçili blok stilini eşleştir"
+            AppLanguage.Spanish -> "Usar el estilo de bloque seleccionado"
+            AppLanguage.French -> "Suivre le style de bloc sélectionné"
+            AppLanguage.German -> "Ausgewählten Blockstil übernehmen"
+            AppLanguage.Russian -> "Повторять выбранный стиль блока"
+            AppLanguage.Arabic -> "مطابقة نمط الكتلة المحدد"
+        }
+
+        Res.string.block_gap_spacing -> when (language) {
+            AppLanguage.English -> "Block Gap"
+            AppLanguage.Turkish -> "Blok Aralığı"
+            AppLanguage.Spanish -> "Separación entre bloques"
+            AppLanguage.French -> "Espacement des blocs"
+            AppLanguage.German -> "Blockabstand"
+            AppLanguage.Russian -> "Зазор между блоками"
+            AppLanguage.Arabic -> "المسافة بين الكتل"
+        }
+
+        Res.string.block_gap_spacing_none -> when (language) {
+            AppLanguage.English -> "None"
+            AppLanguage.Turkish -> "Boşluksuz"
+            AppLanguage.Spanish -> "Sin espacio"
+            AppLanguage.French -> "Sans espace"
+            AppLanguage.German -> "Ohne Abstand"
+            AppLanguage.Russian -> "Без зазора"
+            AppLanguage.Arabic -> "بدون فراغ"
+        }
+
+        Res.string.block_gap_spacing_low -> when (language) {
+            AppLanguage.English -> "Low"
+            AppLanguage.Turkish -> "Az"
+            AppLanguage.Spanish -> "Bajo"
+            AppLanguage.French -> "Faible"
+            AppLanguage.German -> "Wenig"
+            AppLanguage.Russian -> "Малый"
+            AppLanguage.Arabic -> "قليل"
+        }
+
+        Res.string.block_gap_spacing_high -> when (language) {
+            AppLanguage.English -> "High"
+            AppLanguage.Turkish -> "Çok"
+            AppLanguage.Spanish -> "Alto"
+            AppLanguage.French -> "Élevé"
+            AppLanguage.German -> "Groß"
+            AppLanguage.Russian -> "Большой"
+            AppLanguage.Arabic -> "كبير"
         }
 
         Res.string.neon_pulse_speed -> when (language) {
@@ -1062,6 +1142,36 @@ internal fun localizedGetString(language: AppLanguage, resource: StringResource,
             AppLanguage.German -> "Bester Wert für diesen Modus: ${textArg(0)}"
             AppLanguage.Russian -> "Лучший результат для этого режима: ${textArg(0)}"
             AppLanguage.Arabic -> "أفضل نتيجة لهذا الوضع: ${textArg(0)}"
+        }
+
+        Res.string.block_style_bubble -> when (language) {
+            AppLanguage.English -> "Bubble"
+            AppLanguage.Turkish -> "Baloncuk"
+            AppLanguage.Spanish -> "Burbuja"
+            AppLanguage.French -> "Bulle"
+            AppLanguage.German -> "Blase"
+            AppLanguage.Russian -> "Пузырь"
+            AppLanguage.Arabic -> "فقاعة"
+        }
+
+        Res.string.block_style_outline -> when (language) {
+            AppLanguage.English -> "Outline"
+            AppLanguage.Turkish -> "Çizgisel"
+            AppLanguage.Spanish -> "Contorno"
+            AppLanguage.French -> "Contour"
+            AppLanguage.German -> "Kontur"
+            AppLanguage.Russian -> "Контур"
+            AppLanguage.Arabic -> "مخطط"
+        }
+
+        Res.string.block_style_wood -> when (language) {
+            AppLanguage.English -> "Wood"
+            AppLanguage.Turkish -> "Tahta"
+            AppLanguage.Spanish -> "Madera"
+            AppLanguage.French -> "Bois"
+            AppLanguage.German -> "Holz"
+            AppLanguage.Russian -> "Дерево"
+            AppLanguage.Arabic -> "خشب"
         }
 
         else -> error("Unsupported localized string resource: $resource")

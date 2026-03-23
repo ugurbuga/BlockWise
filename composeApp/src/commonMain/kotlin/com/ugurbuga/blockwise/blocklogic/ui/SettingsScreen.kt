@@ -33,11 +33,21 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import blockwise.composeapp.generated.resources.Res
 import blockwise.composeapp.generated.resources.back
+import blockwise.composeapp.generated.resources.board_block_style
+import blockwise.composeapp.generated.resources.board_block_style_flat
+import blockwise.composeapp.generated.resources.board_block_style_match_selected
+import blockwise.composeapp.generated.resources.block_gap_spacing
+import blockwise.composeapp.generated.resources.block_gap_spacing_high
+import blockwise.composeapp.generated.resources.block_gap_spacing_low
+import blockwise.composeapp.generated.resources.block_gap_spacing_none
 import blockwise.composeapp.generated.resources.block_style_flat
+import blockwise.composeapp.generated.resources.block_style_bubble
+import blockwise.composeapp.generated.resources.block_style_outline
 import blockwise.composeapp.generated.resources.block_style
 import blockwise.composeapp.generated.resources.block_style_liquid_glass
 import blockwise.composeapp.generated.resources.block_style_neon
-import blockwise.composeapp.generated.resources.block_style_raised
+import blockwise.composeapp.generated.resources.block_style_sharp_3d
+import blockwise.composeapp.generated.resources.block_style_wood
 import blockwise.composeapp.generated.resources.block_color_palette
 import blockwise.composeapp.generated.resources.block_palette_candy
 import blockwise.composeapp.generated.resources.block_palette_classic
@@ -67,15 +77,20 @@ import blockwise.composeapp.generated.resources.theme_light
 import blockwise.composeapp.generated.resources.theme_system
 import com.ugurbuga.blockwise.AppColorPalette
 import com.ugurbuga.blockwise.BlockColorPalette
+import com.ugurbuga.blockwise.BlockGapSpacing
 import com.ugurbuga.blockwise.BlockVisualStyle
+import com.ugurbuga.blockwise.BoardBlockStyleMode
 import com.ugurbuga.blockwise.DragFingerOffsetLevel
 import com.ugurbuga.blockwise.InvalidPlacementFeedbackMode
 import com.ugurbuga.blockwise.LocalBlockColorPalette
+import com.ugurbuga.blockwise.LocalBlockGapSpacing
 import com.ugurbuga.blockwise.LocalBlockVisualStyle
 import com.ugurbuga.blockwise.LocalPaletteIsDarkTheme
 import com.ugurbuga.blockwise.NeonPulseSpeed
+import com.ugurbuga.blockwise.SelectableBoardBlockStyleModes
 import com.ugurbuga.blockwise.SelectableAppColorPalettes
 import com.ugurbuga.blockwise.SelectableBlockColorPalettes
+import com.ugurbuga.blockwise.SelectableBlockGapSpacings
 import com.ugurbuga.blockwise.SelectableBlockVisualStyles
 import com.ugurbuga.blockwise.SelectableDragFingerOffsetLevels
 import com.ugurbuga.blockwise.SelectableInvalidPlacementFeedbackModes
@@ -85,6 +100,9 @@ import com.ugurbuga.blockwise.AppThemeMode
 import com.ugurbuga.blockwise.SelectableAppLanguages
 import com.ugurbuga.blockwise.SelectableThemeModes
 import com.ugurbuga.blockwise.blocklogic.domain.BlockColor
+import com.ugurbuga.blockwise.resolveBoardBlockShapeStyle
+import com.ugurbuga.blockwise.resolveBoardEmptyBlockRenderStyle
+import com.ugurbuga.blockwise.resolveBoardFilledBlockRenderStyle
 import com.ugurbuga.blockwise.localizedStringResource as stringResource
 import com.ugurbuga.blockwise.ui.theme.BlockWisePalette
 import com.ugurbuga.blockwise.ui.theme.BlockWiseTheme
@@ -97,6 +115,8 @@ internal fun SettingsScreen(
     selectedThemeColorPalette: AppColorPalette,
     selectedBlockColorPalette: BlockColorPalette,
     selectedBlockVisualStyle: BlockVisualStyle,
+    selectedBoardBlockStyleMode: BoardBlockStyleMode,
+    selectedBlockGapSpacing: BlockGapSpacing,
     selectedNeonPulseSpeed: NeonPulseSpeed,
     selectedDragFingerOffsetLevel: DragFingerOffsetLevel,
     selectedInvalidPlacementFeedbackMode: InvalidPlacementFeedbackMode,
@@ -105,6 +125,8 @@ internal fun SettingsScreen(
     onThemeColorPaletteSelected: (AppColorPalette) -> Unit,
     onBlockColorPaletteSelected: (BlockColorPalette) -> Unit,
     onBlockVisualStyleSelected: (BlockVisualStyle) -> Unit,
+    onBoardBlockStyleModeSelected: (BoardBlockStyleMode) -> Unit,
+    onBlockGapSpacingSelected: (BlockGapSpacing) -> Unit,
     onNeonPulseSpeedSelected: (NeonPulseSpeed) -> Unit,
     onDragFingerOffsetLevelSelected: (DragFingerOffsetLevel) -> Unit,
     onInvalidPlacementFeedbackModeSelected: (InvalidPlacementFeedbackMode) -> Unit,
@@ -155,6 +177,32 @@ internal fun SettingsScreen(
             preview = {
                 BlockStylePreview(
                     style = style,
+                    palette = selectedBlockColorPalette,
+                )
+            },
+        )
+    }
+    val blockGapSpacingOptions = SelectableBlockGapSpacings.map { spacing ->
+        SettingsChipOption(
+            value = spacing,
+            label = blockGapSpacingLabel(spacing),
+            preview = {
+                BlockGapSpacingPreview(
+                    spacing = spacing,
+                    style = selectedBlockVisualStyle,
+                    palette = selectedBlockColorPalette,
+                )
+            },
+        )
+    }
+    val boardBlockStyleOptions = SelectableBoardBlockStyleModes.map { mode ->
+        SettingsChipOption(
+            value = mode,
+            label = boardBlockStyleModeLabel(mode),
+            preview = {
+                BoardBlockStylePreview(
+                    mode = mode,
+                    selectedBlockStyle = selectedBlockVisualStyle,
                     palette = selectedBlockColorPalette,
                 )
             },
@@ -274,6 +322,20 @@ internal fun SettingsScreen(
                         onSelected = onBlockVisualStyleSelected,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    SettingsChipGroup(
+                        title = stringResource(Res.string.board_block_style),
+                        selectedValue = selectedBoardBlockStyleMode,
+                        options = boardBlockStyleOptions,
+                        onSelected = onBoardBlockStyleModeSelected,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    SettingsChipGroup(
+                        title = stringResource(Res.string.block_gap_spacing),
+                        selectedValue = selectedBlockGapSpacing,
+                        options = blockGapSpacingOptions,
+                        onSelected = onBlockGapSpacingSelected,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                     if (selectedBlockVisualStyle == BlockVisualStyle.Neon) {
                         SettingsChipGroup(
                             title = stringResource(Res.string.neon_pulse_speed),
@@ -300,6 +362,14 @@ internal fun SettingsScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun boardBlockStyleModeLabel(mode: BoardBlockStyleMode): String {
+    return when (mode) {
+        BoardBlockStyleMode.Flat -> stringResource(Res.string.board_block_style_flat)
+        BoardBlockStyleMode.MatchSelectedBlockStyle -> stringResource(Res.string.board_block_style_match_selected)
     }
 }
 
@@ -426,9 +496,21 @@ private fun themeModeLabel(themeMode: AppThemeMode): String {
 private fun blockVisualStyleLabel(style: BlockVisualStyle): String {
     return when (style) {
         BlockVisualStyle.Flat -> stringResource(Res.string.block_style_flat)
-        BlockVisualStyle.Raised3D -> stringResource(Res.string.block_style_raised)
+        BlockVisualStyle.Bubble -> stringResource(Res.string.block_style_bubble)
+        BlockVisualStyle.Outline -> stringResource(Res.string.block_style_outline)
+        BlockVisualStyle.Sharp3D -> stringResource(Res.string.block_style_sharp_3d)
+        BlockVisualStyle.Wood -> stringResource(Res.string.block_style_wood)
         BlockVisualStyle.LiquidGlass -> stringResource(Res.string.block_style_liquid_glass)
         BlockVisualStyle.Neon -> stringResource(Res.string.block_style_neon)
+    }
+}
+
+@Composable
+private fun blockGapSpacingLabel(spacing: BlockGapSpacing): String {
+    return when (spacing) {
+        BlockGapSpacing.None -> stringResource(Res.string.block_gap_spacing_none)
+        BlockGapSpacing.Low -> stringResource(Res.string.block_gap_spacing_low)
+        BlockGapSpacing.High -> stringResource(Res.string.block_gap_spacing_high)
     }
 }
 
@@ -468,7 +550,7 @@ private fun BlockStylePreview(style: BlockVisualStyle, palette: BlockColorPalett
                 )
                 BlockStylePreviewTile(
                     color = BlockColor.Blue.toPaletteColor(),
-                    interaction = if (style == BlockVisualStyle.Raised3D) {
+                    interaction = if (style == BlockVisualStyle.Sharp3D) {
                         BlockTileInteraction.Pressed
                     } else {
                         BlockTileInteraction.Normal
@@ -477,6 +559,65 @@ private fun BlockStylePreview(style: BlockVisualStyle, palette: BlockColorPalett
                 BlockStylePreviewTile(
                     color = BlockColor.Yellow.toPaletteColor(),
                     interaction = BlockTileInteraction.Normal,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BlockGapSpacingPreview(
+    spacing: BlockGapSpacing,
+    style: BlockVisualStyle,
+    palette: BlockColorPalette,
+) {
+    CompositionLocalProvider(
+        LocalBlockVisualStyle provides style,
+        LocalBlockColorPalette provides palette,
+        LocalBlockGapSpacing provides spacing,
+    ) {
+        PreviewMiniCard {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(spacing.gapDp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BlockStylePreviewTile(color = BlockColor.Red.toPaletteColor(), interaction = BlockTileInteraction.Normal)
+                BlockStylePreviewTile(color = BlockColor.Green.toPaletteColor(), interaction = BlockTileInteraction.Normal)
+                BlockStylePreviewTile(color = BlockColor.Blue.toPaletteColor(), interaction = BlockTileInteraction.Normal)
+            }
+        }
+    }
+}
+
+@Composable
+private fun BoardBlockStylePreview(
+    mode: BoardBlockStyleMode,
+    selectedBlockStyle: BlockVisualStyle,
+    palette: BlockColorPalette,
+) {
+    val boardShapeStyle = resolveBoardBlockShapeStyle(mode, selectedBlockStyle)
+    val emptyCellRenderStyle = resolveBoardEmptyBlockRenderStyle(mode, selectedBlockStyle)
+    val filledCellRenderStyle = resolveBoardFilledBlockRenderStyle(mode, selectedBlockStyle)
+    CompositionLocalProvider(
+        LocalBlockColorPalette provides palette,
+    ) {
+        PreviewMiniCard {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BlockStylePreviewTile(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    interaction = BlockTileInteraction.Normal,
+                    recessed = true,
+                    renderStyleOverride = emptyCellRenderStyle,
+                    shapeStyleOverride = boardShapeStyle,
+                )
+                BlockStylePreviewTile(
+                    color = BlockColor.Blue.toPaletteColor(),
+                    interaction = BlockTileInteraction.Normal,
+                    renderStyleOverride = filledCellRenderStyle,
+                    shapeStyleOverride = boardShapeStyle,
                 )
             }
         }
@@ -547,14 +688,20 @@ private fun ThemePalettePreviewSwatch(color: Color) {
 private fun BlockStylePreviewTile(
     color: Color,
     interaction: BlockTileInteraction,
+    renderStyleOverride: BlockVisualStyle? = null,
+    shapeStyleOverride: BlockVisualStyle? = null,
+    recessed: Boolean = false,
 ) {
     Box(modifier = Modifier.size(14.dp)) {
         BlockTile3D(
             fillColor = color,
             borderWidth = 1.dp,
             cornerRadius = 4.dp,
-            elevation = 3.dp,
+            recessed = recessed,
+            elevation = if (recessed) 0.dp else 3.dp,
             interaction = interaction,
+            renderStyleOverride = renderStyleOverride,
+            shapeStyleOverride = shapeStyleOverride,
             modifier = Modifier.fillMaxSize(),
         )
     }
@@ -576,6 +723,8 @@ private fun SettingsScreenPreview() {
             selectedThemeColorPalette = AppColorPalette.Classic,
             selectedBlockColorPalette = BlockColorPalette.Classic,
             selectedBlockVisualStyle = BlockVisualStyle.Flat,
+            selectedBoardBlockStyleMode = BoardBlockStyleMode.Flat,
+            selectedBlockGapSpacing = BlockGapSpacing.Low,
             selectedNeonPulseSpeed = NeonPulseSpeed.Normal,
             selectedDragFingerOffsetLevel = DragFingerOffsetLevel.Medium,
             selectedInvalidPlacementFeedbackMode = InvalidPlacementFeedbackMode.OnDrop,
@@ -584,6 +733,8 @@ private fun SettingsScreenPreview() {
             onThemeColorPaletteSelected = {},
             onBlockColorPaletteSelected = {},
             onBlockVisualStyleSelected = {},
+            onBoardBlockStyleModeSelected = {},
+            onBlockGapSpacingSelected = {},
             onNeonPulseSpeedSelected = {},
             onDragFingerOffsetLevelSelected = {},
             onInvalidPlacementFeedbackModeSelected = {},

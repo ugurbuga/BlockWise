@@ -1,6 +1,13 @@
 package com.ugurbuga.blockwise.blocklogic.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -8,6 +15,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitTouchSlopOrCancellation
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +23,7 @@ import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -57,28 +67,38 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ugurbuga.blockwise.AppColorPalette
 import com.ugurbuga.blockwise.BlockVisualStyle
+import com.ugurbuga.blockwise.LocalBoardBlockStyleMode
 import com.ugurbuga.blockwise.InvalidPlacementFeedbackMode
+import com.ugurbuga.blockwise.LocalAppColorPalette
 import com.ugurbuga.blockwise.LocalAppLanguage
 import com.ugurbuga.blockwise.LocalBlockColorPalette
+import com.ugurbuga.blockwise.LocalBlockGapSpacing
 import com.ugurbuga.blockwise.LocalBlockVisualStyle
 import com.ugurbuga.blockwise.LocalDragFingerOffsetLevel
 import com.ugurbuga.blockwise.LocalInvalidPlacementFeedbackMode
 import com.ugurbuga.blockwise.LocalPaletteIsDarkTheme
 import com.ugurbuga.blockwise.localizedGetString
+import com.ugurbuga.blockwise.resolveBoardEmptyBlockRenderStyle
+import com.ugurbuga.blockwise.resolveBoardFilledBlockRenderStyle
+import com.ugurbuga.blockwise.resolveBoardBlockShapeStyle
 import com.ugurbuga.blockwise.localizedStringResource as stringResource
 import com.ugurbuga.blockwise.blocklogic.domain.BlockColor
 import com.ugurbuga.blockwise.blocklogic.domain.CellCoord
 import com.ugurbuga.blockwise.blocklogic.domain.CellOffset
 import com.ugurbuga.blockwise.blocklogic.domain.GameEngine
 import com.ugurbuga.blockwise.blocklogic.domain.Difficulty
+import com.ugurbuga.blockwise.blocklogic.domain.GameRules
 import com.ugurbuga.blockwise.blocklogic.domain.GridSize
+import com.ugurbuga.blockwise.blocklogic.domain.Grid
 import com.ugurbuga.blockwise.blocklogic.domain.PlacementFailure
 import com.ugurbuga.blockwise.blocklogic.domain.RuleViolation
 import com.ugurbuga.blockwise.blocklogic.domain.Piece
 import com.ugurbuga.blockwise.blocklogic.domain.Shapes
 import com.ugurbuga.blockwise.blocklogic.domain.resolveGameConfig
 import com.ugurbuga.blockwise.ui.theme.BlockWisePalette
+import com.ugurbuga.blockwise.ui.theme.BlockWiseThemePalette
 import com.ugurbuga.blockwise.ui.theme.BlockWiseTheme
 import com.ugurbuga.blockwise.ui.theme.toPaletteColor
 import blockwise.composeapp.generated.resources.Res
@@ -103,9 +123,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 import kotlin.math.abs
+import kotlin.math.PI
 import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 private data class PieceLayoutInfo(
     val sizePx: IntSize,
@@ -114,6 +136,11 @@ private data class PieceLayoutInfo(
 private data class PieceSpan(
     val widthCells: Int,
     val heightCells: Int,
+)
+
+internal data class DragClearPreview(
+    val rowIndices: Set<Int> = emptySet(),
+    val colIndices: Set<Int> = emptySet(),
 )
 
 private data class PieceContentSize(
@@ -276,6 +303,14 @@ internal fun resolveDraggedOriginAxis(
     }
 }
 
+internal fun resolveAttemptedDraggedOriginAxis(
+    targetContentStart: Float,
+    axis: GridAxisGeometry,
+): Int? {
+    if (axis.step <= 0f) return null
+    return ((targetContentStart - axis.firstStart) / axis.step).roundToInt()
+}
+
 internal fun normalizeDragStartOffsetInContent(
     startOffsetInPiece: Float,
     pieceContainerInsetPx: Float,
@@ -349,6 +384,32 @@ internal fun previewCellsForOrigins(piece: Piece, origins: Set<CellCoord>): Set<
             )
         }
     }
+}
+
+internal fun previewClearLinesForPlacement(
+    grid: Grid,
+    piece: Piece,
+    origin: CellCoord?,
+    rules: GameRules,
+): DragClearPreview {
+    if (origin == null) return DragClearPreview()
+    if (GameEngine.validatePlacement(grid, piece, origin.x, origin.y, rules) != null) {
+        return DragClearPreview()
+    }
+
+    val result = GameEngine.place(
+        grid = grid,
+        piece = piece,
+        originX = origin.x,
+        originY = origin.y,
+        rules = rules,
+    )
+    if (result.ruleViolation != null) return DragClearPreview()
+
+    return DragClearPreview(
+        rowIndices = result.clearedRowIndices,
+        colIndices = result.clearedColIndices,
+    )
 }
 
 private fun Piece.boardCellsAt(originX: Int, originY: Int): List<Pair<Int, Int>> {
@@ -581,6 +642,7 @@ fun BlockLogicContent(
 ) {
     val dragFingerOffsetPx = LocalDragFingerOffsetLevel.current.offsetPx
     val invalidPlacementFeedbackMode = LocalInvalidPlacementFeedbackMode.current
+    val gridGapDp = LocalBlockGapSpacing.current.gapDp
     val density = LocalDensity.current
     var contentTopLeftInRoot by remember { mutableStateOf(Offset.Zero) }
     var gridTopLeftInRoot by remember(state.gridSize) { mutableStateOf(Offset.Zero) }
@@ -603,7 +665,6 @@ fun BlockLogicContent(
     var dragLogSequence by remember { mutableStateOf(0) }
 
     val gridCount = state.gridSize.value
-    val gridGapDp = 2.dp
     val pieceContainerPaddingDp = 0.dp
     val pieceContainerInsetPx = with(density) { pieceContainerPaddingDp.toPx() }
     val gridGapPx = with(density) { gridGapDp.toPx() }
@@ -618,6 +679,14 @@ fun BlockLogicContent(
         ?.toPaletteColor()
         ?.copy(alpha = 0.15f)
         ?: MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f)
+    val dragPreviewClear = draggingPieceSnapshot?.let { piece ->
+        previewClearLinesForPlacement(
+            grid = state.grid,
+            piece = piece,
+            origin = dragSnappedPlacement?.let { CellCoord(it.originX, it.originY) },
+            rules = rules,
+        )
+    } ?: DragClearPreview()
 
     fun formatPlacement(piece: Piece, placement: DragPlacement?): String {
         return if (placement == null) {
@@ -687,35 +756,32 @@ fun BlockLogicContent(
             return
         }
 
-        val failure = if (resolution.placement == null) {
+        val failure: PlacementFailure? = if (resolution.placement == null) {
             val geometry = buildGridGeometry(
                 gridTopLeftInRoot = gridTopLeftInRoot,
                 gridSizePx = gridSizePx,
                 gridCount = gridCount,
                 gapPx = gridGapPx,
             ) ?: return
-            val anchor = dragAnchor ?: return
-            val hoveredX = resolveAttemptedPointerCellAxis(
-                pointerPosition = fingerInRoot.x,
-                axis = geometry.x,
-                cellExtent = geometry.cellWidth,
+            val contentTopLeft = dragStartOffsetInContent?.let { fingerInRoot - it } ?: return
+            val span = piece.spanInCells()
+            val attemptedPlacement = DragPlacement(
+                originX = (resolveAttemptedDraggedOriginAxis(
+                    targetContentStart = contentTopLeft.x,
+                    axis = geometry.x,
+                ) ?: return).coerceAtMost(gridCount - span.widthCells),
+                originY = (resolveAttemptedDraggedOriginAxis(
+                    targetContentStart = contentTopLeft.y,
+                    axis = geometry.y,
+                ) ?: return).coerceAtMost(gridCount - span.heightCells),
             )
-            val hoveredY = resolveAttemptedPointerCellAxis(
-                pointerPosition = fingerInRoot.y,
-                axis = geometry.y,
-                cellExtent = geometry.cellHeight,
+            GameEngine.validatePlacement(
+                state.grid,
+                piece,
+                attemptedPlacement.originX,
+                attemptedPlacement.originY,
+                rules,
             )
-            val attempted = if (hoveredX != null && hoveredY != null) {
-                resolveAttemptedDragOrigin(
-                    hoveredCell = CellCoord(x = hoveredX, y = hoveredY),
-                    anchor = CellOffset(dx = anchor.dx, dy = anchor.dy),
-                )
-            } else {
-                null
-            }
-            attempted?.let {
-                GameEngine.validatePlacement(state.grid, piece, attempted.x, attempted.y, rules)
-            }
         } else {
             null
         }
@@ -793,32 +859,38 @@ fun BlockLogicContent(
             fingerInRoot.y in geometry.y.firstStart..boardBottom
     }
 
+    fun draggedContentTopLeftInRoot(fingerInRoot: Offset): Offset? {
+        val offsetInContent = dragStartOffsetInContent ?: return null
+        return fingerInRoot - offsetInContent
+    }
+
     fun computeDragResolution(piece: Piece, fingerInRoot: Offset): DragResolution? {
         val geometry = measuredGridGeometry() ?: return null
-        val anchor = dragAnchor ?: return null
         val validOrigins = if (draggingPieceId != null) dragValidOrigins else state.validOrigins
-        val hoveredX = resolvePointerCellAxis(
-            pointerPosition = fingerInRoot.x,
-            axis = geometry.x,
-            cellExtent = geometry.cellWidth,
-            maxCellIndex = gridCount - 1,
-        ) ?: return null
-        val hoveredY = resolvePointerCellAxis(
-            pointerPosition = fingerInRoot.y,
-            axis = geometry.y,
-            cellExtent = geometry.cellHeight,
-            maxCellIndex = gridCount - 1,
-        ) ?: return null
+        val span = piece.spanInCells()
+        val contentTopLeft = draggedContentTopLeftInRoot(fingerInRoot) ?: return null
         val isInsideBoard = isFingerInsideBoard(fingerInRoot, geometry)
-        val hoveredCell = CellCoord(x = hoveredX, y = hoveredY)
-        val origin = resolveValidDragOrigin(
-            piece = piece,
-            hoveredCell = hoveredCell,
-            anchor = CellOffset(dx = anchor.dx, dy = anchor.dy),
-            gridCount = gridCount,
-            isFingerInsideBoard = isInsideBoard,
-            validOrigins = validOrigins,
-        )
+        val maxOriginX = (gridCount - span.widthCells).coerceAtLeast(0)
+        val maxOriginY = (gridCount - span.heightCells).coerceAtLeast(0)
+        val originX = resolveSnappedOriginAxis(
+            targetContentStart = contentTopLeft.x,
+            axis = geometry.x,
+            maxOrigin = maxOriginX,
+        ) ?: return null
+        val originY = resolveSnappedOriginAxis(
+            targetContentStart = contentTopLeft.y,
+            axis = geometry.y,
+            maxOrigin = maxOriginY,
+        ) ?: return null
+        val origin = CellCoord(x = originX, y = originY).takeIf {
+            isInsideBoard && it in validOrigins
+        }
+        val hoveredCell = dragAnchor?.let { anchor ->
+            HoveredBoardCell(
+                x = (originX + anchor.dx).coerceIn(0, gridCount - 1),
+                y = (originY + anchor.dy).coerceIn(0, gridCount - 1),
+            )
+        }
 
         return DragResolution(
             placement = origin?.let {
@@ -827,35 +899,30 @@ fun BlockLogicContent(
                     originY = it.y,
                 )
             },
-            hoveredCell = HoveredBoardCell(x = hoveredCell.x, y = hoveredCell.y),
+            hoveredCell = hoveredCell,
             isFingerInsideBoard = isInsideBoard,
         )
     }
 
-    fun computeAttemptedDragPlacement(fingerInRoot: Offset): DragPlacement? {
+    fun computeAttemptedDragPlacement(piece: Piece, fingerInRoot: Offset): DragPlacement? {
         val geometry = measuredGridGeometry() ?: return null
-        val anchor = dragAnchor ?: return null
-        val hoveredX = resolveAttemptedPointerCellAxis(
-            pointerPosition = fingerInRoot.x,
+        val span = piece.spanInCells()
+        val contentTopLeft = draggedContentTopLeftInRoot(fingerInRoot) ?: return null
+        val originX = resolveAttemptedDraggedOriginAxis(
+            targetContentStart = contentTopLeft.x,
             axis = geometry.x,
-            cellExtent = geometry.cellWidth,
         ) ?: return null
-        val hoveredY = resolveAttemptedPointerCellAxis(
-            pointerPosition = fingerInRoot.y,
+        val originY = resolveAttemptedDraggedOriginAxis(
+            targetContentStart = contentTopLeft.y,
             axis = geometry.y,
-            cellExtent = geometry.cellHeight,
         ) ?: return null
-        val attemptedOrigin = resolveAttemptedDragOrigin(
-            hoveredCell = CellCoord(x = hoveredX, y = hoveredY),
-            anchor = CellOffset(dx = anchor.dx, dy = anchor.dy),
-        )
         return DragPlacement(
-            originX = attemptedOrigin.x,
-            originY = attemptedOrigin.y,
+            originX = originX.coerceAtMost(gridCount - span.widthCells),
+            originY = originY.coerceAtMost(gridCount - span.heightCells),
         )
     }
 
-    val gridCellSizeDp = remember(gridSizePx, gridCount) {
+    val gridCellSizeDp = remember(gridSizePx, gridCount, gridGapDp, density) {
         if (gridSizePx.width <= 0 || gridCount <= 0) 16.dp
         else with(density) {
             val gapPx = gridGapDp.toPx()
@@ -946,11 +1013,14 @@ fun BlockLogicContent(
                 highlightedCellColor = highlightedCellColor,
                 clearingRows = state.clearingRows,
                 clearingCols = state.clearingCols,
+                previewClearingRows = dragPreviewClear.rowIndices,
+                previewClearingCols = dragPreviewClear.colIndices,
                 onCellTapped = onCellTapped,
                 onGridMeasured = { topLeftInRoot, sizePx ->
                     gridTopLeftInRoot = topLeftInRoot
                     gridSizePx = sizePx
                 },
+                cellSize = gridCellSizeDp,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
@@ -1144,7 +1214,11 @@ fun BlockLogicContent(
                     val finger = rawFinger?.let { adjustedDragFingerInRoot(it, dragFingerOffsetPx) }
                     val geometry = measuredGridGeometry()
                     val resolution = if (piece != null && finger != null) computeDragResolution(piece, finger) else null
-                    val attemptedPlacement = if (finger != null) computeAttemptedDragPlacement(finger) else null
+                    val attemptedPlacement = if (piece != null && finger != null) {
+                        computeAttemptedDragPlacement(piece, finger)
+                    } else {
+                        null
+                    }
                     val placement = if (resolution != null) {
                         resolution.placement
                     } else {
@@ -1338,17 +1412,31 @@ private fun GridView(
     highlightedCellColor: Color,
     clearingRows: Set<Int>,
     clearingCols: Set<Int>,
+    previewClearingRows: Set<Int>,
+    previewClearingCols: Set<Int>,
     onCellTapped: (x: Int, y: Int) -> Unit,
     onGridMeasured: (topLeftInRoot: Offset, sizePx: IntSize) -> Unit,
+    cellSize: Dp,
     modifier: Modifier = Modifier,
 ) {
-    val blockStyle = LocalBlockVisualStyle.current
+    val selectedBlockStyle = LocalBlockVisualStyle.current
+    val boardBlockStyleMode = LocalBoardBlockStyleMode.current
+    val boardShapeStyle = resolveBoardBlockShapeStyle(boardBlockStyleMode, selectedBlockStyle)
+    val emptyCellRenderStyle = resolveBoardEmptyBlockRenderStyle(boardBlockStyleMode, selectedBlockStyle)
+    val filledCellRenderStyle = resolveBoardFilledBlockRenderStyle(boardBlockStyleMode, selectedBlockStyle)
+    val boardColorStyle = BlockVisualStyle.Flat
+    val gap = LocalBlockGapSpacing.current.gapDp
+    val density = LocalDensity.current
+    val appColorPalette = LocalAppColorPalette.current
+    val useDarkTheme = LocalPaletteIsDarkTheme.current
     val paletteColors = BlockWisePalette.blockColors(
         palette = LocalBlockColorPalette.current,
-        darkTheme = LocalPaletteIsDarkTheme.current,
+        darkTheme = useDarkTheme,
     )
+    val themePalette = BlockWisePalette.themePalette(appColorPalette, useDarkTheme)
     val paletteAccent = themedBoardPaletteAccent(
-        style = blockStyle,
+        appColorPalette = appColorPalette,
+        style = boardColorStyle,
         colors = listOf(
             paletteColors.red,
             paletteColors.green,
@@ -1356,51 +1444,122 @@ private fun GridView(
             paletteColors.yellow,
         ),
     )
-    val boardBaseSurfaceColor = blendColors(
-        MaterialTheme.colorScheme.background,
-        MaterialTheme.colorScheme.surfaceVariant,
-        0.34f,
+    val boardBaseSurfaceColor = themedBoardBaseSurfaceColor(
+        appColorPalette = appColorPalette,
+        style = boardColorStyle,
+        themePalette = themePalette,
     )
-    val boardBaseBorderColor = blendColors(
-        MaterialTheme.colorScheme.background,
-        MaterialTheme.colorScheme.outlineVariant,
-        0.5f,
+    val resolvedBoardBaseSurfaceColor = if (useDarkTheme) {
+        boardBaseSurfaceColor
+    } else {
+        blendColors(boardBaseSurfaceColor, Color.Black, 0.035f)
+    }
+    val boardBaseBorderColor = themedBoardBaseBorderColor(
+        appColorPalette = appColorPalette,
+        style = boardColorStyle,
+        themePalette = themePalette,
     )
     val emptyCellColor = themedEmptyBoardCellColor(
-        baseColor = boardBaseSurfaceColor,
+        baseColor = resolvedBoardBaseSurfaceColor,
         paletteAccent = paletteAccent,
-        style = blockStyle,
+        style = boardColorStyle,
     )
     val emptyCellBorderColor = themedEmptyBoardCellBorderColor(
         baseColor = boardBaseBorderColor,
         paletteAccent = paletteAccent,
-        style = blockStyle,
+        style = boardColorStyle,
     )
     val highlightedEmptyCellColor = themedHighlightedBoardCellColor(
         baseColor = emptyCellColor,
         highlightColor = highlightedCellColor,
-        style = blockStyle,
+        style = boardColorStyle,
     )
     val highlightedEmptyCellBorderColor = themedHighlightedBoardCellBorderColor(
         baseColor = emptyCellBorderColor,
         highlightColor = highlightedCellColor,
-        style = blockStyle,
+        style = boardColorStyle,
     )
+    val previewClearTransition = rememberInfiniteTransition(label = "preview-clear-lines")
+    val previewClearScale = previewClearTransition.animateFloat(
+        initialValue = 0.97f,
+        targetValue = 1.075f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 560, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "preview-clear-scale",
+    ).value
+    val previewClearAccent = previewClearTransition.animateFloat(
+        initialValue = 0.24f,
+        targetValue = 0.72f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 560, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "preview-clear-accent",
+    ).value
+    val hasActiveClearAnimation = clearingRows.isNotEmpty() || clearingCols.isNotEmpty()
+    val clearAnimationProgress = remember { Animatable(0f) }
+    LaunchedEffect(clearingRows, clearingCols) {
+        if (hasActiveClearAnimation) {
+            clearAnimationProgress.stop()
+            clearAnimationProgress.snapTo(0f)
+            clearAnimationProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = CLEAR_ANIMATION_DURATION_MS.toInt(),
+                    easing = FastOutSlowInEasing,
+                ),
+            )
+        } else {
+            clearAnimationProgress.stop()
+            clearAnimationProgress.snapTo(0f)
+        }
+    }
+    val clearProgress = if (hasActiveClearAnimation) clearAnimationProgress.value else 0f
+    val clearFlashStrength = when {
+        clearProgress <= 0f -> 0f
+        clearProgress < 0.18f -> clearProgress / 0.18f
+        clearProgress < 0.46f -> 1f
+        else -> (1f - (clearProgress - 0.46f) / 0.54f).coerceIn(0f, 1f)
+    }
+    val clearDissolveStrength = clearProgress.coerceIn(0f, 1f)
+    val boardShakeAmplitudePx = with(density) { 8.dp.toPx() }
+    val boardShakeDecay = (1f - clearProgress).coerceIn(0f, 1f)
+    val boardShakeX = if (hasActiveClearAnimation && clearingCols.isNotEmpty()) {
+        sin(clearProgress * PI.toFloat() * 14f) * boardShakeAmplitudePx * boardShakeDecay
+    } else {
+        0f
+    }
+    val boardShakeY = if (hasActiveClearAnimation && clearingRows.isNotEmpty()) {
+        sin(clearProgress * PI.toFloat() * 12f) * boardShakeAmplitudePx * 0.72f * boardShakeDecay
+    } else {
+        0f
+    }
+    val boardCornerRadius = (cellSize * 0.22f).coerceAtLeast(6.dp)
     val size = grid.size.value
     Column(
-        modifier = modifier.onGloballyPositioned { coords ->
-            onGridMeasured(coords.positionInRoot(), coords.size)
-        },
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = modifier
+            .graphicsLayer {
+                translationX = boardShakeX
+                translationY = boardShakeY
+            }
+            .onGloballyPositioned { coords ->
+                onGridMeasured(coords.positionInRoot(), coords.size)
+            },
+        verticalArrangement = Arrangement.spacedBy(gap),
     ) {
         for (y in 0 until size) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
                 for (x in 0 until size) {
                     val cell = grid[x, y]
                     val isHighlightedCell = CellCoord(x, y) in highlightedCells
                     val isClearingCell = y in clearingRows || x in clearingCols
+                    val isPreviewClearingCell = !isClearingCell &&
+                        (y in previewClearingRows || x in previewClearingCols)
                     val isLockedCell = cell?.isLocked == true
                     val isPrefilledCell = cell?.isPrefilled == true
+                    val isCrossClearCell = y in clearingRows && x in clearingCols
                     val cellFillColor = when {
                         cell != null -> cell.color.toPaletteColor()
                         isHighlightedCell -> highlightedEmptyCellColor
@@ -1412,17 +1571,130 @@ private fun GridView(
                         isHighlightedCell -> highlightedEmptyCellBorderColor
                         else -> emptyCellBorderColor
                     }
-                    val clearProgress by animateFloatAsState(
-                        targetValue = if (isClearingCell) 0f else 1f,
-                        animationSpec = tween(durationMillis = 220),
-                    )
+                    val previewFillColor = if (isPreviewClearingCell) {
+                        blendColors(
+                            cellFillColor,
+                            paletteAccent.lighten(0.42f).copy(alpha = 1f),
+                            0.26f + previewClearAccent * 0.5f,
+                        )
+                    } else {
+                        cellFillColor
+                    }
+                    val previewBorderColor = if (isPreviewClearingCell) {
+                        blendColors(
+                            cellBorderColor,
+                            paletteAccent.lighten(0.54f).copy(alpha = 1f),
+                            0.42f + previewClearAccent * 0.44f,
+                        )
+                    } else {
+                        cellBorderColor
+                    }
+                    val clearingFillColor = if (isClearingCell) {
+                        blendColors(
+                            blendColors(
+                                previewFillColor,
+                                paletteAccent.lighten(0.62f).copy(alpha = 1f),
+                                0.34f + clearFlashStrength * 0.34f,
+                            ),
+                            Color.White.copy(alpha = 1f),
+                            0.18f + clearFlashStrength * if (isCrossClearCell) 0.42f else 0.3f,
+                        )
+                    } else {
+                        previewFillColor
+                    }
+                    val clearingBorderColor = if (isClearingCell) {
+                        blendColors(
+                            previewBorderColor,
+                            Color.White.copy(alpha = 1f),
+                            0.38f + clearFlashStrength * if (isCrossClearCell) 0.48f else 0.34f,
+                        )
+                    } else {
+                        previewBorderColor
+                    }
+                    val previewHighlightBrush = if (isPreviewClearingCell) {
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = (0.3f + previewClearAccent * 0.26f).coerceIn(0f, 0.72f)),
+                                paletteAccent.lighten(0.5f).copy(alpha = (0.18f + previewClearAccent * 0.2f).coerceIn(0f, 0.54f)),
+                                Color.Transparent,
+                            ),
+                        )
+                    } else {
+                        null
+                    }
+                    val previewTopSheenBrush = if (isPreviewClearingCell) {
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = (0.28f + previewClearAccent * 0.22f).coerceIn(0f, 0.6f)),
+                                paletteAccent.lighten(0.32f).copy(alpha = (0.12f + previewClearAccent * 0.12f).coerceIn(0f, 0.28f)),
+                                Color.Transparent,
+                            ),
+                        )
+                    } else {
+                        null
+                    }
+                    val clearingHighlightBrush = if (isClearingCell) {
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = (0.38f + clearFlashStrength * 0.34f).coerceIn(0f, 0.92f)),
+                                paletteAccent.lighten(0.7f).copy(alpha = (0.26f + clearFlashStrength * 0.26f).coerceIn(0f, 0.68f)),
+                                Color.Transparent,
+                            ),
+                        )
+                    } else {
+                        null
+                    }
+                    val clearingStreakBrush = if (isClearingCell) {
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.White.copy(alpha = (0.32f + clearFlashStrength * 0.3f).coerceIn(0f, 0.86f)),
+                                paletteAccent.lighten(0.64f).copy(alpha = (0.22f + clearFlashStrength * 0.22f).coerceIn(0f, 0.58f)),
+                                Color.Transparent,
+                            ),
+                        )
+                    } else {
+                        null
+                    }
+                    val previewPulseScale = if (isPreviewClearingCell) previewClearScale else 1f
+                    val previewPulseAlpha = if (isPreviewClearingCell) {
+                        (0.96f + previewClearAccent * 0.08f).coerceIn(0f, 1f)
+                    } else {
+                        1f
+                    }
+                    val actualClearAlpha = if (isClearingCell) {
+                        (1f - clearDissolveStrength * 0.72f).coerceIn(0f, 1f)
+                    } else {
+                        1f
+                    }
+                    val actualClearScale = if (isClearingCell) {
+                        val pop = 1f + clearFlashStrength * if (isCrossClearCell) 0.16f else 0.1f
+                        val collapse = 1f - clearDissolveStrength * if (isCrossClearCell) 0.92f else 0.84f
+                        maxOf(0.08f, pop * collapse)
+                    } else {
+                        1f
+                    }
+                    val actualClearRotation = if (isClearingCell) {
+                        sin(clearProgress * PI.toFloat() * 10f) *
+                            (if (isCrossClearCell) 3.4f else 2.2f) *
+                            boardShakeDecay
+                    } else {
+                        0f
+                    }
                     BlockTile3D(
-                        fillColor = cellFillColor,
-                        borderColor = cellBorderColor,
-                        borderWidth = if (isLockedCell) 2.dp else 1.dp,
-                        cornerRadius = 8.dp,
+                        fillColor = clearingFillColor,
+                        borderColor = clearingBorderColor,
+                        borderWidth = when {
+                            isClearingCell -> if (isCrossClearCell) 3.8.dp else 3.2.dp
+                            isLockedCell -> 2.dp
+                            isPreviewClearingCell -> 2.6.dp
+                            else -> 1.dp
+                        },
+                        cornerRadius = boardCornerRadius,
                         recessed = cell == null,
                         elevation = when {
+                            isClearingCell -> if (isCrossClearCell) 10.dp else 8.dp
+                            isPreviewClearingCell -> 6.dp
                             cell != null -> 3.dp
                             else -> 0.dp
                         },
@@ -1430,12 +1702,71 @@ private fun GridView(
                             .weight(1f)
                             .aspectRatio(1f)
                             .graphicsLayer {
-                                alpha = clearProgress
-                                scaleX = 0.85f + 0.15f * clearProgress
-                                scaleY = 0.85f + 0.15f * clearProgress
+                                alpha = previewPulseAlpha * actualClearAlpha
+                                scaleX = previewPulseScale * actualClearScale
+                                scaleY = previewPulseScale * actualClearScale
+                                rotationZ = actualClearRotation
                             }
                             .clickable { onCellTapped(x, y) },
-                    ) {}
+                        renderStyleOverride = when {
+                            isClearingCell -> BlockVisualStyle.Flat
+                            cell != null -> filledCellRenderStyle
+                            else -> emptyCellRenderStyle
+                        },
+                        shapeStyleOverride = boardShapeStyle,
+                    ) {
+                        clearingHighlightBrush?.let { brush ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer {
+                                        alpha = (0.24f + clearFlashStrength * 0.22f).coerceIn(0f, 0.46f)
+                                    }
+                                    .background(brush)
+                            )
+                        }
+                        clearingStreakBrush?.let { brush ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(0.74f)
+                                    .fillMaxHeight(1.12f)
+                                    .align(Alignment.Center)
+                                    .graphicsLayer {
+                                        rotationZ = if (y in clearingRows && x !in clearingCols) {
+                                            90f
+                                        } else if (x in clearingCols && y !in clearingRows) {
+                                            0f
+                                        } else {
+                                            45f
+                                        }
+                                        alpha = (0.38f + clearFlashStrength * 0.28f).coerceIn(0f, 0.72f)
+                                    }
+                                    .background(brush)
+                            )
+                        }
+                        previewHighlightBrush?.let { brush ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer {
+                                        alpha = (0.18f + previewClearAccent * 0.16f).coerceIn(0f, 0.34f)
+                                    }
+                                    .background(brush)
+                            )
+                        }
+                        previewTopSheenBrush?.let { brush ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(0.28f)
+                                    .align(Alignment.TopCenter)
+                                    .graphicsLayer {
+                                        alpha = (0.5f + previewClearAccent * 0.2f).coerceIn(0f, 0.82f)
+                                    }
+                                    .background(brush)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -1443,6 +1774,7 @@ private fun GridView(
 }
 
 private fun themedBoardPaletteAccent(
+    appColorPalette: AppColorPalette,
     style: BlockVisualStyle,
     colors: List<Color>,
 ): Color {
@@ -1450,17 +1782,133 @@ private fun themedBoardPaletteAccent(
     val vivid = colors.maxByOrNull(::colorVividness) ?: average
     val vividTarget = when (style) {
         BlockVisualStyle.Flat -> vivid
-        BlockVisualStyle.Raised3D -> vivid.lighten(0.04f)
+        BlockVisualStyle.Bubble -> vivid.lighten(0.1f)
+        BlockVisualStyle.Outline -> vivid
+        BlockVisualStyle.Sharp3D -> vivid.lighten(0.02f)
+        BlockVisualStyle.Wood -> vivid.lighten(0.03f)
         BlockVisualStyle.LiquidGlass -> vivid.lighten(0.1f)
         BlockVisualStyle.Neon -> vivid.lighten(0.16f)
     }
-    val amount = when (style) {
-        BlockVisualStyle.Flat -> 0.18f
-        BlockVisualStyle.Raised3D -> 0.22f
-        BlockVisualStyle.LiquidGlass -> 0.28f
-        BlockVisualStyle.Neon -> 0.34f
+    val amount = when (appColorPalette) {
+        AppColorPalette.Classic -> when (style) {
+            BlockVisualStyle.Flat -> 0.14f
+            BlockVisualStyle.Bubble -> 0.22f
+            BlockVisualStyle.Outline -> 0.14f
+            BlockVisualStyle.Sharp3D -> 0.17f
+            BlockVisualStyle.Wood -> 0.19f
+            BlockVisualStyle.LiquidGlass -> 0.24f
+            BlockVisualStyle.Neon -> 0.3f
+        }
+
+        AppColorPalette.Aurora -> when (style) {
+            BlockVisualStyle.Flat -> 0.16f
+            BlockVisualStyle.Bubble -> 0.24f
+            BlockVisualStyle.Outline -> 0.16f
+            BlockVisualStyle.Sharp3D -> 0.19f
+            BlockVisualStyle.Wood -> 0.21f
+            BlockVisualStyle.LiquidGlass -> 0.26f
+            BlockVisualStyle.Neon -> 0.32f
+        }
+
+        AppColorPalette.Sunset -> when (style) {
+            BlockVisualStyle.Flat -> 0.15f
+            BlockVisualStyle.Bubble -> 0.23f
+            BlockVisualStyle.Outline -> 0.15f
+            BlockVisualStyle.Sharp3D -> 0.18f
+            BlockVisualStyle.Wood -> 0.2f
+            BlockVisualStyle.LiquidGlass -> 0.25f
+            BlockVisualStyle.Neon -> 0.31f
+        }
     }
     return blendColors(average, vividTarget, amount)
+}
+
+private fun themedBoardBaseSurfaceColor(
+    appColorPalette: AppColorPalette,
+    style: BlockVisualStyle,
+    themePalette: BlockWiseThemePalette,
+): Color {
+    val paletteSurface = when (appColorPalette) {
+        AppColorPalette.Classic -> themePalette.surfaceVariant
+        AppColorPalette.Aurora -> blendColors(themePalette.surfaceVariant, themePalette.secondaryContainer, 0.08f)
+        AppColorPalette.Sunset -> blendColors(themePalette.surfaceVariant, themePalette.primaryContainer, 0.08f)
+    }
+    val amount = when (appColorPalette) {
+        AppColorPalette.Classic -> when (style) {
+            BlockVisualStyle.Flat -> 0.24f
+            BlockVisualStyle.Bubble -> 0.31f
+            BlockVisualStyle.Outline -> 0.22f
+            BlockVisualStyle.Sharp3D -> 0.27f
+            BlockVisualStyle.Wood -> 0.29f
+            BlockVisualStyle.LiquidGlass -> 0.3f
+            BlockVisualStyle.Neon -> 0.32f
+        }
+
+        AppColorPalette.Aurora -> when (style) {
+            BlockVisualStyle.Flat -> 0.2f
+            BlockVisualStyle.Bubble -> 0.27f
+            BlockVisualStyle.Outline -> 0.18f
+            BlockVisualStyle.Sharp3D -> 0.23f
+            BlockVisualStyle.Wood -> 0.25f
+            BlockVisualStyle.LiquidGlass -> 0.26f
+            BlockVisualStyle.Neon -> 0.28f
+        }
+
+        AppColorPalette.Sunset -> when (style) {
+            BlockVisualStyle.Flat -> 0.22f
+            BlockVisualStyle.Bubble -> 0.29f
+            BlockVisualStyle.Outline -> 0.2f
+            BlockVisualStyle.Sharp3D -> 0.25f
+            BlockVisualStyle.Wood -> 0.27f
+            BlockVisualStyle.LiquidGlass -> 0.28f
+            BlockVisualStyle.Neon -> 0.3f
+        }
+    }
+    return blendColors(themePalette.background, paletteSurface, amount)
+}
+
+private fun themedBoardBaseBorderColor(
+    appColorPalette: AppColorPalette,
+    style: BlockVisualStyle,
+    themePalette: BlockWiseThemePalette,
+): Color {
+    val paletteOutline = when (appColorPalette) {
+        AppColorPalette.Classic -> themePalette.outlineVariant
+        AppColorPalette.Aurora -> blendColors(themePalette.outlineVariant, themePalette.secondary, 0.08f)
+        AppColorPalette.Sunset -> blendColors(themePalette.outlineVariant, themePalette.tertiary, 0.06f)
+    }
+    val amount = when (appColorPalette) {
+        AppColorPalette.Classic -> when (style) {
+            BlockVisualStyle.Flat -> 0.42f
+            BlockVisualStyle.Bubble -> 0.49f
+            BlockVisualStyle.Outline -> 0.4f
+            BlockVisualStyle.Sharp3D -> 0.5f
+            BlockVisualStyle.Wood -> 0.47f
+            BlockVisualStyle.LiquidGlass -> 0.5f
+            BlockVisualStyle.Neon -> 0.54f
+        }
+
+        AppColorPalette.Aurora -> when (style) {
+            BlockVisualStyle.Flat -> 0.38f
+            BlockVisualStyle.Bubble -> 0.45f
+            BlockVisualStyle.Outline -> 0.36f
+            BlockVisualStyle.Sharp3D -> 0.46f
+            BlockVisualStyle.Wood -> 0.43f
+            BlockVisualStyle.LiquidGlass -> 0.46f
+            BlockVisualStyle.Neon -> 0.5f
+        }
+
+        AppColorPalette.Sunset -> when (style) {
+            BlockVisualStyle.Flat -> 0.4f
+            BlockVisualStyle.Bubble -> 0.47f
+            BlockVisualStyle.Outline -> 0.38f
+            BlockVisualStyle.Sharp3D -> 0.48f
+            BlockVisualStyle.Wood -> 0.45f
+            BlockVisualStyle.LiquidGlass -> 0.48f
+            BlockVisualStyle.Neon -> 0.52f
+        }
+    }
+    return blendColors(themePalette.background, paletteOutline, amount)
 }
 
 private fun themedEmptyBoardCellColor(
@@ -1470,7 +1918,10 @@ private fun themedEmptyBoardCellColor(
 ): Color {
     val amount = when (style) {
         BlockVisualStyle.Flat -> 0.08f
-        BlockVisualStyle.Raised3D -> 0.11f
+        BlockVisualStyle.Bubble -> 0.14f
+        BlockVisualStyle.Outline -> 0.06f
+        BlockVisualStyle.Sharp3D -> 0.1f
+        BlockVisualStyle.Wood -> 0.12f
         BlockVisualStyle.LiquidGlass -> 0.14f
         BlockVisualStyle.Neon -> 0.18f
     }
@@ -1484,7 +1935,10 @@ private fun themedEmptyBoardCellBorderColor(
 ): Color {
     val amount = when (style) {
         BlockVisualStyle.Flat -> 0.1f
-        BlockVisualStyle.Raised3D -> 0.13f
+        BlockVisualStyle.Bubble -> 0.16f
+        BlockVisualStyle.Outline -> 0.08f
+        BlockVisualStyle.Sharp3D -> 0.16f
+        BlockVisualStyle.Wood -> 0.14f
         BlockVisualStyle.LiquidGlass -> 0.16f
         BlockVisualStyle.Neon -> 0.2f
     }
@@ -1498,13 +1952,19 @@ private fun themedHighlightedBoardCellColor(
 ): Color {
     val amount = when (style) {
         BlockVisualStyle.Flat -> 0.24f
-        BlockVisualStyle.Raised3D -> 0.28f
+        BlockVisualStyle.Bubble -> 0.33f
+        BlockVisualStyle.Outline -> 0.2f
+        BlockVisualStyle.Sharp3D -> 0.3f
+        BlockVisualStyle.Wood -> 0.29f
         BlockVisualStyle.LiquidGlass -> 0.33f
         BlockVisualStyle.Neon -> 0.38f
     }
     val alpha = when (style) {
         BlockVisualStyle.Flat -> 0.88f
-        BlockVisualStyle.Raised3D -> 0.88f
+        BlockVisualStyle.Bubble -> 0.9f
+        BlockVisualStyle.Outline -> 0.86f
+        BlockVisualStyle.Sharp3D -> 0.9f
+        BlockVisualStyle.Wood -> 0.88f
         BlockVisualStyle.LiquidGlass -> 0.82f
         BlockVisualStyle.Neon -> 0.84f
     }
@@ -1518,7 +1978,10 @@ private fun themedHighlightedBoardCellBorderColor(
 ): Color {
     val amount = when (style) {
         BlockVisualStyle.Flat -> 0.32f
-        BlockVisualStyle.Raised3D -> 0.36f
+        BlockVisualStyle.Bubble -> 0.39f
+        BlockVisualStyle.Outline -> 0.3f
+        BlockVisualStyle.Sharp3D -> 0.4f
+        BlockVisualStyle.Wood -> 0.36f
         BlockVisualStyle.LiquidGlass -> 0.4f
         BlockVisualStyle.Neon -> 0.45f
     }
@@ -1679,12 +2142,12 @@ private fun PiecePreview(
     borderColor: Color = MaterialTheme.colorScheme.outlineVariant,
     borderWidth: Dp = 1.2.dp,
 ) {
+    val gap = LocalBlockGapSpacing.current.gapDp
     val maxDx = piece.shape.cells.maxOf { it.dx }
     val maxDy = piece.shape.cells.maxOf { it.dy }
     val width = maxDx + 1
     val height = maxDy + 1
 
-    val gap = 2.dp
     val totalWidth = cellSize * width + gap * (width - 1)
     val totalHeight = cellSize * height + gap * (height - 1)
 

@@ -82,7 +82,9 @@ internal class AppRootComponent(
         data object LevelSelection : Config
 
         @Serializable
-        data class Game(val sessionKey: Int) : Config
+        data class Game(val sessionKey: Int) : Config {
+            companion object
+        }
 
         @Serializable
         data object Rules : Config

@@ -80,6 +80,8 @@ fun App() {
     var appColorPalette by rememberSaveable { mutableStateOf(initializeAppColorPalette()) }
     var blockColorPalette by rememberSaveable { mutableStateOf(initializeBlockColorPalette()) }
     var blockVisualStyle by rememberSaveable { mutableStateOf(initializeBlockVisualStyle()) }
+    var boardBlockStyleMode by rememberSaveable { mutableStateOf(initializeBoardBlockStyleMode()) }
+    var blockGapSpacing by rememberSaveable { mutableStateOf(initializeBlockGapSpacing()) }
     var neonPulseSpeed by rememberSaveable { mutableStateOf(initializeNeonPulseSpeed()) }
     var dragFingerOffsetLevel by rememberSaveable { mutableStateOf(initializeDragFingerOffsetLevel()) }
     var invalidPlacementFeedbackMode by rememberSaveable {
@@ -148,6 +150,8 @@ fun App() {
                     LocalAppLanguage provides appLanguage,
                     LocalBlockColorPalette provides blockColorPalette,
                     LocalBlockVisualStyle provides blockVisualStyle,
+                    LocalBoardBlockStyleMode provides boardBlockStyleMode,
+                    LocalBlockGapSpacing provides blockGapSpacing,
                     LocalNeonPulseSpeed provides neonPulseSpeed,
                     LocalDragFingerOffsetLevel provides dragFingerOffsetLevel,
                     LocalInvalidPlacementFeedbackMode provides invalidPlacementFeedbackMode,
@@ -290,6 +294,8 @@ fun App() {
                                         selectedThemeColorPalette = appColorPalette,
                                         selectedBlockColorPalette = blockColorPalette,
                                         selectedBlockVisualStyle = blockVisualStyle,
+                                        selectedBoardBlockStyleMode = boardBlockStyleMode,
+                                        selectedBlockGapSpacing = blockGapSpacing,
                                         selectedNeonPulseSpeed = neonPulseSpeed,
                                         selectedDragFingerOffsetLevel = dragFingerOffsetLevel,
                                         selectedInvalidPlacementFeedbackMode = invalidPlacementFeedbackMode,
@@ -322,6 +328,18 @@ fun App() {
                                             if (style != blockVisualStyle) {
                                                 BlockVisualStyleStore.saveSelectedBlockVisualStyle(style)
                                                 blockVisualStyle = style
+                                            }
+                                        },
+                                        onBoardBlockStyleModeSelected = { mode ->
+                                            if (mode != boardBlockStyleMode) {
+                                                BoardBlockStyleModeStore.saveSelectedBoardBlockStyleMode(mode)
+                                                boardBlockStyleMode = mode
+                                            }
+                                        },
+                                        onBlockGapSpacingSelected = { spacing ->
+                                            if (spacing != blockGapSpacing) {
+                                                BlockGapSpacingStore.saveSelectedBlockGapSpacing(spacing)
+                                                blockGapSpacing = spacing
                                             }
                                         },
                                         onNeonPulseSpeedSelected = { speed ->
