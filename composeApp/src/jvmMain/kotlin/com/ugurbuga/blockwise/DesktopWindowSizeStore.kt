@@ -5,8 +5,8 @@ import androidx.compose.ui.window.WindowPosition
 import java.util.prefs.Preferences
 import kotlin.math.roundToInt
 
-private const val DEFAULT_DESKTOP_WINDOW_WIDTH_DP = 1180
-private const val DEFAULT_DESKTOP_WINDOW_HEIGHT_DP = 860
+private const val DEFAULT_DESKTOP_WINDOW_WIDTH_DP = 720
+private const val DEFAULT_DESKTOP_WINDOW_HEIGHT_DP = 1280
 
 internal data class DesktopWindowBounds(
     val widthDp: Int,
