@@ -21,12 +21,8 @@
     <string name="color_palette_sunset">Atardecer</string>
     <string name="block_style">Estilo de bloque</string>
     <string name="block_style_flat">Plano</string>
-    <string name="block_style_rounded_soft">Redondeado suave</string>
     <string name="block_style_bubble">Burbuja</string>
-    <string name="block_style_neumorphism">Soft UI</string>
-    <string name="block_style_clay">Arcilla</string>
     <string name="block_style_outline">Contorno</string>
-    <string name="block_style_raised">3D elevado</string>
     <string name="block_style_sharp_3d">3D angular</string>
     <string name="block_style_wood">Madera</string>
     <string name="block_style_liquid_glass">Vidrio líquido</string>

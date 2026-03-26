@@ -21,12 +21,8 @@
     <string name="color_palette_sunset">Coucher de soleil</string>
     <string name="block_style">Style des blocs</string>
     <string name="block_style_flat">Plat</string>
-    <string name="block_style_rounded_soft">Arrondi doux</string>
     <string name="block_style_bubble">Bulle</string>
-    <string name="block_style_neumorphism">Soft UI</string>
-    <string name="block_style_clay">Argile</string>
     <string name="block_style_outline">Contour</string>
-    <string name="block_style_raised">3D surélevé</string>
     <string name="block_style_sharp_3d">3D anguleux</string>
     <string name="block_style_wood">Bois</string>
     <string name="block_style_liquid_glass">Verre liquide</string>

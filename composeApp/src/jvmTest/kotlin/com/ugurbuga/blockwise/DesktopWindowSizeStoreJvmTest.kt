@@ -8,7 +8,7 @@ class DesktopWindowSizeStoreJvmTest {
     @Test
     fun `desktop window bounds sanitization falls back to defaults when values are missing`() {
         assertEquals(
-            DesktopWindowBounds(widthDp = 1180, heightDp = 860),
+            DesktopWindowBounds(widthDp = 720, heightDp = 1280),
             sanitizeDesktopWindowBounds(widthDp = null, heightDp = null),
         )
     }
@@ -32,7 +32,7 @@ class DesktopWindowSizeStoreJvmTest {
     @Test
     fun `desktop window bounds sanitization drops partial position values`() {
         assertEquals(
-            DesktopWindowBounds(widthDp = 1180, heightDp = 860, positionXDp = null, positionYDp = null),
+            DesktopWindowBounds(widthDp = 720, heightDp = 1280, positionXDp = null, positionYDp = null),
             sanitizeDesktopWindowBounds(widthDp = null, heightDp = null, positionXDp = 120, positionYDp = null),
         )
     }

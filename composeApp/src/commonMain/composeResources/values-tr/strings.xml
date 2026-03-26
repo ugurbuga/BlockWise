@@ -20,12 +20,8 @@
     <string name="color_palette_sunset">Gün Batımı</string>
     <string name="block_style">Blok Stili</string>
     <string name="block_style_flat">Düz</string>
-    <string name="block_style_rounded_soft">Oval Yumuşak</string>
     <string name="block_style_bubble">Baloncuk</string>
-    <string name="block_style_neumorphism">Soft UI</string>
-    <string name="block_style_clay">Kil</string>
     <string name="block_style_outline">Çizgisel</string>
-    <string name="block_style_raised">Yükseltilmiş 3D</string>
     <string name="block_style_sharp_3d">Köşeli 3D</string>
     <string name="block_style_wood">Tahta</string>
     <string name="block_style_liquid_glass">Liquid Glass</string>

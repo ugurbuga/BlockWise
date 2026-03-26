@@ -21,12 +21,8 @@
     <string name="color_palette_sunset">غروب</string>
     <string name="block_style">نمط القطع</string>
     <string name="block_style_flat">مسطح</string>
-    <string name="block_style_rounded_soft">مستدير ناعم</string>
     <string name="block_style_bubble">فقاعة</string>
-    <string name="block_style_neumorphism">Soft UI</string>
-    <string name="block_style_clay">طين</string>
     <string name="block_style_outline">مخطط</string>
-    <string name="block_style_raised">ثلاثي الأبعاد مرتفع</string>
     <string name="block_style_sharp_3d">ثلاثي الأبعاد حاد</string>
     <string name="block_style_wood">خشب</string>
     <string name="block_style_liquid_glass">زجاج سائل</string>

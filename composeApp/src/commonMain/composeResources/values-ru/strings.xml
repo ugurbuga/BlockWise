@@ -21,12 +21,8 @@
     <string name="color_palette_sunset">Закат</string>
     <string name="block_style">Стиль блоков</string>
     <string name="block_style_flat">Плоский</string>
-    <string name="block_style_rounded_soft">Мягко-скруглённый</string>
     <string name="block_style_bubble">Пузырь</string>
-    <string name="block_style_neumorphism">Soft UI</string>
-    <string name="block_style_clay">Глина</string>
     <string name="block_style_outline">Контур</string>
-    <string name="block_style_raised">Объёмный 3D</string>
     <string name="block_style_sharp_3d">Угловатый 3D</string>
     <string name="block_style_wood">Дерево</string>
     <string name="block_style_liquid_glass">Жидкое стекло</string>
