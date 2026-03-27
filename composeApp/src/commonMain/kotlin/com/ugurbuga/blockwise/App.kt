@@ -22,6 +22,7 @@ import com.ugurbuga.blockwise.blocklogic.ui.LevelSelectionScreen
 import com.ugurbuga.blockwise.blocklogic.ui.RulesScreen
 import com.ugurbuga.blockwise.blocklogic.ui.ScoresScreen
 import com.ugurbuga.blockwise.blocklogic.ui.SettingsScreen
+import com.ugurbuga.blockwise.blocklogic.ui.ShapesPreviewScreen
 import com.ugurbuga.blockwise.blocklogic.domain.Difficulty
 import com.ugurbuga.blockwise.blocklogic.domain.GameModeKey
 import com.ugurbuga.blockwise.blocklogic.domain.GridSize
@@ -35,6 +36,7 @@ internal enum class AppScreen {
     Rules,
     Scores,
     Settings,
+    ShapesPreview,
 }
 
 internal fun pushScreen(backStack: List<AppScreen>, destination: AppScreen): List<AppScreen> {
@@ -56,6 +58,7 @@ internal fun screenStateKey(screen: AppScreen, gameSessionKey: Int): String {
         AppScreen.Rules -> AppScreen.Rules.name
         AppScreen.Scores -> AppScreen.Scores.name
         AppScreen.Settings -> AppScreen.Settings.name
+        AppScreen.ShapesPreview -> AppScreen.ShapesPreview.name
     }
 }
 
@@ -70,6 +73,7 @@ internal fun scrollStateKey(
         AppScreen.Rules -> "${AppScreen.Rules.name}:${selectedSize.value}:${selectedDifficulty.name}"
         AppScreen.Scores -> AppScreen.Scores.name
         AppScreen.Settings -> AppScreen.Settings.name
+        AppScreen.ShapesPreview -> AppScreen.ShapesPreview.name
     }
 }
 
@@ -187,6 +191,11 @@ fun App() {
                                 AppScreen.Settings,
                                 gameSessionKey = 0,
                             )
+
+                            AppRootComponent.Child.ShapesPreview -> screenStateKey(
+                                AppScreen.ShapesPreview,
+                                gameSessionKey = 0,
+                            )
                         }
 
                         saveableStateHolder.SaveableStateProvider(
@@ -216,6 +225,9 @@ fun App() {
                                         },
                                         onOpenScores = {
                                             navigation.openScores()
+                                        },
+                                        onOpenShapesPreview = {
+                                            navigation.openShapesPreview()
                                         },
                                         onOpenSettings = {
                                             navigation.openSettings()
@@ -366,6 +378,12 @@ fun App() {
                                         onScrollChanged = {
                                             pageScrollOffsets[settingsScrollKey] = it
                                         },
+                                    )
+                                }
+
+                                AppRootComponent.Child.ShapesPreview -> {
+                                    ShapesPreviewScreen(
+                                        onBack = { navigation.onBack() }
                                     )
                                 }
                             }

@@ -115,4 +115,10 @@
     <string name="scores_best_for_mode">En iyi skor</string>
     <string name="scores_empty">-</string>
     <string name="selected_mode_best_score">Bu mod için en iyi skor: %1$s</string>
+
+    <string name="shapes_preview_title">Şekiller</string>
+    <string name="shapes_preview_section_2x2">2x2</string>
+    <string name="shapes_preview_section_3x3">3x3</string>
+    <string name="shapes_preview_section_4x4">4x4</string>
+    <string name="shapes_preview_section_5x5">5x5</string>
 </resources>

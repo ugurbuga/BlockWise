@@ -1773,7 +1773,7 @@ private fun GridView(
     }
 }
 
-private fun themedBoardPaletteAccent(
+internal fun themedBoardPaletteAccent(
     appColorPalette: AppColorPalette,
     style: BlockVisualStyle,
     colors: List<Color>,
@@ -1823,7 +1823,7 @@ private fun themedBoardPaletteAccent(
     return blendColors(average, vividTarget, amount)
 }
 
-private fun themedBoardBaseSurfaceColor(
+internal fun themedBoardBaseSurfaceColor(
     appColorPalette: AppColorPalette,
     style: BlockVisualStyle,
     themePalette: BlockWiseThemePalette,
@@ -1867,7 +1867,7 @@ private fun themedBoardBaseSurfaceColor(
     return blendColors(themePalette.background, paletteSurface, amount)
 }
 
-private fun themedBoardBaseBorderColor(
+internal fun themedBoardBaseBorderColor(
     appColorPalette: AppColorPalette,
     style: BlockVisualStyle,
     themePalette: BlockWiseThemePalette,
@@ -1911,7 +1911,7 @@ private fun themedBoardBaseBorderColor(
     return blendColors(themePalette.background, paletteOutline, amount)
 }
 
-private fun themedEmptyBoardCellColor(
+internal fun themedEmptyBoardCellColor(
     baseColor: Color,
     paletteAccent: Color,
     style: BlockVisualStyle,
@@ -1928,7 +1928,7 @@ private fun themedEmptyBoardCellColor(
     return blendColors(baseColor, paletteAccent, amount)
 }
 
-private fun themedEmptyBoardCellBorderColor(
+internal fun themedEmptyBoardCellBorderColor(
     baseColor: Color,
     paletteAccent: Color,
     style: BlockVisualStyle,
@@ -1992,7 +1992,7 @@ private fun themedHighlightedBoardCellBorderColor(
     ).copy(alpha = 0.74f)
 }
 
-private fun averageColor(colors: List<Color>): Color {
+internal fun averageColor(colors: List<Color>): Color {
     val count = colors.size.coerceAtLeast(1)
     return Color(
         red = colors.sumOf { it.red.toDouble() }.toFloat() / count,
@@ -2002,13 +2002,13 @@ private fun averageColor(colors: List<Color>): Color {
     )
 }
 
-private fun colorVividness(color: Color): Float {
+internal fun colorVividness(color: Color): Float {
     val max = maxOf(color.red, color.green, color.blue)
     val min = minOf(color.red, color.green, color.blue)
     return (max - min) + max * 0.18f
 }
 
-private fun blendColors(start: Color, end: Color, fraction: Float): Color {
+internal fun blendColors(start: Color, end: Color, fraction: Float): Color {
     val clampedFraction = fraction.coerceIn(0f, 1f)
     return Color(
         red = start.red + (end.red - start.red) * clampedFraction,
@@ -2050,7 +2050,7 @@ private fun PiecesRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         repeat(3) { index ->
@@ -2061,11 +2061,7 @@ private fun PiecesRow(
             ) {
                 if (piece != null) {
                     val isSelected = index == selectedIndex
-                    val trayAlpha by animateFloatAsState(
-                        targetValue = if (piece.id == draggingPieceId) 0.22f else 1f,
-                        animationSpec = tween(durationMillis = 180),
-                        label = "piece-tray-alpha",
-                    )
+                    val trayAlpha = if (piece.id == draggingPieceId) 0.22f else 1f
 
                     Box(
                         modifier = Modifier
@@ -2135,7 +2131,7 @@ private fun PiecesRow(
 }
 
 @Composable
-private fun PiecePreview(
+internal fun PiecePreview(
     piece: Piece,
     cellSize: Dp,
     pressed: Boolean = false,
@@ -2186,7 +2182,7 @@ private fun BlockLogicContentPreview() {
     val grid = GameEngine.newGrid(size)
     val pieces = listOf(
         Piece(shape = Shapes.Square2, color = BlockColor.Red),
-        Piece(shape = Shapes.Line3V, color = BlockColor.Blue),
+        Piece(shape = Shapes.Line3H, color = BlockColor.Blue),
         Piece(shape = Shapes.L3, color = BlockColor.Green),
     )
     BlockWiseTheme {

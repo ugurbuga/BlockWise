@@ -259,12 +259,12 @@ class ComposeAppCommonTest {
     }
 
     @Test
-    fun `all random shapes stay within 4x4 bounds`() {
+    fun `all random shapes stay within 5x5 bounds`() {
         assertTrue(
             Shapes.All.all { shape ->
                 val maxDx = shape.cells.maxOf { it.dx }
                 val maxDy = shape.cells.maxOf { it.dy }
-                maxDx < 4 && maxDy < 4
+                maxDx < 5 && maxDy < 5
             }
         )
     }
@@ -679,8 +679,8 @@ class ComposeAppCommonTest {
 
         assertEquals(null, config.rules.maxSameColorPerRow)
         assertEquals(null, config.rules.maxSameColorPerCol)
-        assertEquals(0.08f, config.difficultyConfig.preFilledRatio)
-        assertEquals(2, config.maxShapeDimension)
+        assertEquals(0f, config.difficultyConfig.preFilledRatio)
+        assertEquals(3, config.maxShapeDimension)
     }
 
     @Test
@@ -710,12 +710,12 @@ class ComposeAppCommonTest {
 
         assertEquals(7, veryHard.rules.maxSameColorPerRow)
         assertEquals(7, veryHard.rules.maxSameColorPerCol)
-        assertEquals(4, veryHard.rules.maxAdjacentSameColor)
+        assertEquals(5, veryHard.rules.maxAdjacentSameColor)
         assertEquals(4, veryHard.rules.minDistinctColorsInFullLine)
         assertEquals(58, veryHard.rules.moveLimit)
         assertEquals(0.15f, veryHard.difficultyConfig.preFilledRatio)
         assertEquals(0.02f, veryHard.difficultyConfig.lockedCellsRatio)
-        assertEquals(4, veryHard.maxShapeDimension)
+        assertEquals(5, veryHard.maxShapeDimension)
     }
 
     @Test
@@ -770,7 +770,7 @@ class ComposeAppCommonTest {
         assertTrue(easyShapes.all { shape ->
             val width = shape.cells.maxOf { it.dx } + 1
             val height = shape.cells.maxOf { it.dy } + 1
-            width <= 2 && height <= 2
+            width <= 3 && height <= 3
         })
         assertTrue(normalShapes.any { shape ->
             val width = shape.cells.maxOf { it.dx } + 1
@@ -781,6 +781,11 @@ class ComposeAppCommonTest {
             val width = shape.cells.maxOf { it.dx } + 1
             val height = shape.cells.maxOf { it.dy } + 1
             width == 4 || height == 4
+        })
+        assertTrue(veryHardShapes.all { shape ->
+            val width = shape.cells.maxOf { it.dx } + 1
+            val height = shape.cells.maxOf { it.dy } + 1
+            width <= 5 && height <= 5
         })
         assertTrue(veryHardShapes.any { shape ->
             val width = shape.cells.maxOf { it.dx } + 1

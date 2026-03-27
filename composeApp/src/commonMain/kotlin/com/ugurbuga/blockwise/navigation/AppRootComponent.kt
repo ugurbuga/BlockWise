@@ -49,6 +49,10 @@ internal class AppRootComponent(
         navigation.bringToFront(Config.Settings)
     }
 
+    fun openShapesPreview() {
+        navigation.bringToFront(Config.ShapesPreview)
+    }
+
     fun openGame() {
         nextGameSessionKey += 1
         navigation.push(Config.Game(sessionKey = nextGameSessionKey))
@@ -65,6 +69,7 @@ internal class AppRootComponent(
             Config.Rules -> Child.Rules
             Config.Scores -> Child.Scores
             Config.Settings -> Child.Settings
+            Config.ShapesPreview -> Child.ShapesPreview
         }
     }
 
@@ -74,6 +79,7 @@ internal class AppRootComponent(
         data object Rules : Child
         data object Scores : Child
         data object Settings : Child
+        data object ShapesPreview : Child
     }
 
     @Serializable
@@ -94,6 +100,9 @@ internal class AppRootComponent(
 
         @Serializable
         data object Settings : Config
+
+        @Serializable
+        data object ShapesPreview : Config
     }
 }
 

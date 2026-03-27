@@ -109,4 +109,10 @@
     <string name="scores_best_for_mode">Best score</string>
     <string name="scores_empty">-</string>
     <string name="selected_mode_best_score">Best for this mode: %1$s</string>
+
+    <string name="shapes_preview_title">Shapes</string>
+    <string name="shapes_preview_section_2x2">2x2</string>
+    <string name="shapes_preview_section_3x3">3x3</string>
+    <string name="shapes_preview_section_4x4">4x4</string>
+    <string name="shapes_preview_section_5x5">5x5</string>
 </resources>

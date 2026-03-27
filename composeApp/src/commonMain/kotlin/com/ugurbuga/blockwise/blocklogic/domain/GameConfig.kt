@@ -44,21 +44,27 @@ fun resolveGameConfig(
     difficulty: Difficulty,
 ): GameConfig {
     val maxShapeDimension = when (difficulty) {
-        Difficulty.Easy -> 2
+        Difficulty.Easy -> 3
         Difficulty.Normal -> 3
-        Difficulty.Hard -> 3
-        Difficulty.VeryHard -> 4
+        Difficulty.Hard -> when (gridSize.value) {
+            12, 14 -> 4
+            else -> 3
+        }
+        Difficulty.VeryHard -> when (gridSize.value) {
+            12, 14 -> 5
+            else -> 4
+        }
     }
 
     val difficultyConfig = when (difficulty) {
         Difficulty.Easy -> DifficultyConfig(
             gridSize = gridSize.value,
-            maxPieceLevel = 2,
+            maxPieceLevel = 3,
             maxSameColorRatio = null,
             maxAdjacentSameColor = null,
             minColorVariety = null,
             moveLimit = null,
-            preFilledRatio = 0.08f,
+            preFilledRatio = 0f,
             lockedCellsRatio = 0f,
         )
 

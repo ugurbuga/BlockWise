@@ -107,6 +107,11 @@ import blockwise.composeapp.generated.resources.settings
 import blockwise.composeapp.generated.resources.scores_title
 import blockwise.composeapp.generated.resources.select_piece
 import blockwise.composeapp.generated.resources.selected_mode_best_score
+import blockwise.composeapp.generated.resources.shapes_preview_section_2x2
+import blockwise.composeapp.generated.resources.shapes_preview_section_3x3
+import blockwise.composeapp.generated.resources.shapes_preview_section_4x4
+import blockwise.composeapp.generated.resources.shapes_preview_section_5x5
+import blockwise.composeapp.generated.resources.shapes_preview_title
 import blockwise.composeapp.generated.resources.theme
 import blockwise.composeapp.generated.resources.theme_dark
 import blockwise.composeapp.generated.resources.theme_light
@@ -721,6 +726,22 @@ internal fun localizedGetString(language: AppLanguage, resource: StringResource,
             AppLanguage.Russian -> "Выбор уровня"
             AppLanguage.Arabic -> "اختيار المستوى"
         }
+
+        Res.string.shapes_preview_title -> when (language) {
+            AppLanguage.English -> "Shapes"
+            AppLanguage.Turkish -> "Şekiller"
+            AppLanguage.Spanish,
+            AppLanguage.French,
+            AppLanguage.German,
+            AppLanguage.Russian,
+            AppLanguage.Arabic,
+            -> "Shapes"
+        }
+
+        Res.string.shapes_preview_section_2x2 -> "2x2"
+        Res.string.shapes_preview_section_3x3 -> "3x3"
+        Res.string.shapes_preview_section_4x4 -> "4x4"
+        Res.string.shapes_preview_section_5x5 -> "5x5"
 
         Res.string.new_game -> when (language) {
             AppLanguage.English -> "New Game"

@@ -34,6 +34,6 @@ internal fun initializeSelectedGridSize(): GridSize {
 
 internal fun initializeSelectedDifficulty(): Difficulty {
     return LevelSelectionStore.loadSelectedDifficulty()
-        ?: Difficulty.Normal.also(LevelSelectionStore::saveSelectedDifficulty)
+        ?: Difficulty.Easy.also(LevelSelectionStore::saveSelectedDifficulty)
 }
 

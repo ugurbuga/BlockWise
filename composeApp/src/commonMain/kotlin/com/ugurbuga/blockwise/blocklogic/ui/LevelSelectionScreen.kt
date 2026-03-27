@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -83,6 +84,7 @@ internal fun LevelSelectionScreen(
     onOpenRules: () -> Unit,
     onOpenScores: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenShapesPreview: () -> Unit = {},
     onPlay: () -> Unit,
     bestScoreForSelection: Int?,
     initialScroll: Int = 0,
@@ -319,6 +321,14 @@ internal fun LevelSelectionScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(stringResource(Res.string.scores))
                         }
+                        Button(onClick = onOpenShapesPreview) {
+                            BlockTile3D(
+                                fillColor = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Şekiller")
+                        }
                     }
                 }
             }
@@ -426,7 +436,7 @@ private data class ChipOption<T>(
     val label: String,
 )
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, heightDp = 1100)
 @Composable
 private fun LevelSelectionScreenPreview() {
     BlockWiseTheme {

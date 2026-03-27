@@ -46,8 +46,13 @@ In addition, the piece pool is constrained by difficulty (e.g., maximum shape di
   - Theme mode: `System`, `Light`, `Dark`
   - Theme color palettes: `Classic`, `Aurora`, `Sunset`
   - Block color palettes: `Classic`, `Candy`, `Neon`, `Earth`
-  - Block styles: `Flat`, `Raised 3D`, `Liquid Glass`, `Neon`
-  - Adjustable neon pulse speed when the Neon block style is selected
+  - Block styles: `Flat`, `Bubble`, `Outline`, `Sharp 3D`, `Wood`, `Liquid Glass`, `Neon`
+  - **Animated Neon border** with adjustable pulse speed (`Slow`, `Normal`, `Fast`)
+  - **Block gap spacing**: `None`, `Low`, `High`
+  - **Board block style modes**: `Always Flat`, `Match Selected Block Style`
+- **Interaction customization**
+  - **Invalid placement feedback**: `While Dragging`, `On Drop`
+  - **Drag finger offset levels**: `None`, `Low`, `Medium`, `High`
 - **Rules screen**
   - Shows active rules (limits) for the currently selected mode.
 - **Scores**
@@ -55,15 +60,18 @@ In addition, the piece pool is constrained by difficulty (e.g., maximum shape di
 - **Settings**
   - Language selection across English, Turkish, Spanish, French, German, Russian, and Arabic
   - Polished chip-based previews for theme palettes, block palettes, and block styles
+  - Real-time preview of all visual customizations
 - **Controls**
   - Piece selection, drag & drop placement, and invalid-move feedback.
 
 ## Tech Stack
 
-- **Kotlin Multiplatform (KMP)**
-- **Compose Multiplatform** + **Material 3**
-- **Decompose** (navigation)
-- **kotlinx.serialization**
+- **Kotlin Multiplatform (KMP)** with Kotlin 2.3.20
+- **Compose Multiplatform 1.10.3** + **Material 3**
+- **Decompose 3.5.0** (navigation)
+- **kotlinx.serialization 1.10.0**
+- **Android Gradle Plugin 9.1.0**
+- **AndroidX Lifecycle 2.10.0**, **AndroidX Core 1.18.0**, **AndroidX Activity 1.13.0**
 
 ## Project Structure
 

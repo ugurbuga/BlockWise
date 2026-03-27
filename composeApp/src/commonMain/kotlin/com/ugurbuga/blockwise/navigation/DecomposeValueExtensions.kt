@@ -12,7 +12,7 @@ internal fun <T : Any> Value<T>.subscribeAsState(): State<T> {
     val state = remember(this) { mutableStateOf(value) }
 
     DisposableEffect(this) {
-        val disposable = observe { state.value = it }
+        val disposable = subscribe { state.value = it }
         onDispose { disposable.cancel() }
     }
 
