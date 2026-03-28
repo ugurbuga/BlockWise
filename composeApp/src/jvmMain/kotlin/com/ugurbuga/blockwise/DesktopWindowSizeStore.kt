@@ -7,6 +7,8 @@ import kotlin.math.roundToInt
 
 private const val DEFAULT_DESKTOP_WINDOW_WIDTH_DP = 720
 private const val DEFAULT_DESKTOP_WINDOW_HEIGHT_DP = 1280
+private const val ASPECT_RATIO_WIDTH = 9f
+private const val ASPECT_RATIO_HEIGHT = 16f
 
 internal data class DesktopWindowBounds(
     val widthDp: Int,
@@ -21,9 +23,27 @@ internal fun sanitizeDesktopWindowBounds(
     positionXDp: Int? = null,
     positionYDp: Int? = null,
 ): DesktopWindowBounds {
+    val targetWidth = widthDp?.takeIf { it > 0 } ?: DEFAULT_DESKTOP_WINDOW_WIDTH_DP
+    val targetHeight = heightDp?.takeIf { it > 0 } ?: DEFAULT_DESKTOP_WINDOW_HEIGHT_DP
+    
+    // Enforce 9:16 aspect ratio - calculate dimensions based on the larger dimension
+    val aspectRatio = ASPECT_RATIO_WIDTH / ASPECT_RATIO_HEIGHT
+    val finalWidth: Int
+    val finalHeight: Int
+    
+    if (targetWidth / aspectRatio <= targetHeight) {
+        // Width is the limiting factor
+        finalWidth = targetWidth
+        finalHeight = (targetWidth / aspectRatio).roundToInt()
+    } else {
+        // Height is the limiting factor
+        finalHeight = targetHeight
+        finalWidth = (targetHeight * aspectRatio).roundToInt()
+    }
+    
     return DesktopWindowBounds(
-        widthDp = widthDp?.takeIf { it > 0 } ?: DEFAULT_DESKTOP_WINDOW_WIDTH_DP,
-        heightDp = heightDp?.takeIf { it > 0 } ?: DEFAULT_DESKTOP_WINDOW_HEIGHT_DP,
+        widthDp = finalWidth,
+        heightDp = finalHeight,
         positionXDp = if (positionXDp != null && positionYDp != null) positionXDp else null,
         positionYDp = if (positionXDp != null && positionYDp != null) positionYDp else null,
     )

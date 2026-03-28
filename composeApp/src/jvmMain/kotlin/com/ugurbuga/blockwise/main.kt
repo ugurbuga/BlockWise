@@ -12,6 +12,11 @@ import androidx.compose.ui.window.rememberWindowState
 import blockwise.composeapp.generated.resources.Res
 import blockwise.composeapp.generated.resources.app_title
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.roundToInt
+import androidx.compose.ui.window.WindowScope
+import androidx.compose.ui.unit.DpSize
+import java.awt.Dimension
+import java.awt.Toolkit
 
 fun main() = application {
     val initialWindowBounds = remember { DesktopWindowSizeStore.loadWindowBounds() }
@@ -25,16 +30,6 @@ fun main() = application {
         height = initialWindowBounds.heightDp.dp,
     )
 
-    LaunchedEffect(windowState) {
-        snapshotFlow {
-            Triple(windowState.size, windowState.position, windowState.placement)
-        }.collect { (size, position, placement) ->
-            if (placement == WindowPlacement.Floating) {
-                DesktopWindowSizeStore.saveWindowBounds(size = size, position = position)
-            }
-        }
-    }
-
     Window(
         onCloseRequest = {
             if (windowState.placement == WindowPlacement.Floating) {
@@ -47,7 +42,39 @@ fun main() = application {
         },
         title = stringResource(Res.string.app_title),
         state = windowState,
+        onPreviewKeyEvent = { false },
+        onKeyEvent = { false },
     ) {
+        // Set up aspect ratio constraints using AWT window
+        LaunchedEffect(Unit) {
+            val window = (this@Window.window)
+            window.addComponentListener(object : java.awt.event.ComponentAdapter() {
+                override fun componentResized(e: java.awt.event.ComponentEvent?) {
+                    val currentSize = window.size
+                    val aspectRatio = 9f / 16f
+                    
+                    // Calculate new size maintaining aspect ratio
+                    val newWidth: Int
+                    val newHeight: Int
+                    
+                    if (currentSize.width / aspectRatio <= currentSize.height) {
+                        // Width is limiting factor
+                        newWidth = currentSize.width
+                        newHeight = (currentSize.width / aspectRatio).roundToInt()
+                    } else {
+                        // Height is limiting factor
+                        newHeight = currentSize.height
+                        newWidth = (currentSize.height * aspectRatio).roundToInt()
+                    }
+                    
+                    // Apply new size if different
+                    if (currentSize.width != newWidth || currentSize.height != newHeight) {
+                        window.size = Dimension(newWidth, newHeight)
+                    }
+                }
+            })
+        }
+        
         App()
     }
 }
