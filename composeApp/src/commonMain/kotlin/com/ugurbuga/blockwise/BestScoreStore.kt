@@ -4,6 +4,7 @@ import com.ugurbuga.blockwise.blocklogic.domain.Difficulty
 import com.ugurbuga.blockwise.blocklogic.domain.GameModeKey
 import com.ugurbuga.blockwise.blocklogic.domain.GridSize
 import com.ugurbuga.blockwise.blocklogic.domain.allGameModes
+import com.ugurbuga.blockwise.blocklogic.domain.customModeKey
 
 internal expect object PlatformScoreStorage {
     fun getInt(key: String): Int?
@@ -32,11 +33,11 @@ internal object BestScoreStore {
     }
 
     internal fun keyFor(size: GridSize, difficulty: Difficulty): String {
-        return GameModeKey(gridSize = size, difficulty = difficulty).storageKey()
+        return customModeKey(gridSize = size, difficulty = difficulty).storageKey()
     }
 
     private fun GameModeKey.storageKey(): String {
-        return "$KEY_PREFIX:${gridSize.value}:${difficulty.name}"
+        return "$KEY_PREFIX:${playMode.name}:${gridSize.value}:${difficulty.name}"
     }
 }
 

@@ -37,6 +37,8 @@ import com.ugurbuga.blockwise.blocklogic.domain.Difficulty
 import com.ugurbuga.blockwise.blocklogic.domain.GameModeKey
 import com.ugurbuga.blockwise.blocklogic.domain.GridSize
 import com.ugurbuga.blockwise.blocklogic.domain.allGameModes
+import com.ugurbuga.blockwise.blocklogic.domain.customModeKey
+import com.ugurbuga.blockwise.blocklogic.domain.quickPlayModeKey
 import com.ugurbuga.blockwise.ui.theme.BlockWiseTheme
 import blockwise.composeapp.generated.resources.Res
 import blockwise.composeapp.generated.resources.back
@@ -186,7 +188,7 @@ private fun ScoreTableRow(
                 style = MaterialTheme.typography.bodyLarge,
             )
             ScoreTableCell(
-                text = difficultyLabel(mode.difficulty),
+                text = gameModeTableLabel(mode),
                 weight = 1f,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -240,8 +242,8 @@ private fun ScoresScreenPreview() {
     BlockWiseTheme {
         ScoresScreen(
             bestScores = mapOf(
-                GameModeKey(GridSize(8), Difficulty.Easy) to 24,
-                GameModeKey(GridSize(14), Difficulty.VeryHard) to 91,
+                quickPlayModeKey() to 24,
+                customModeKey(GridSize(14), Difficulty.VeryHard) to 91,
             ),
             onBack = {},
         )

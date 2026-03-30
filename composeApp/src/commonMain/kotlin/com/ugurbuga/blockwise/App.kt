@@ -23,9 +23,10 @@ import com.ugurbuga.blockwise.blocklogic.ui.RulesScreen
 import com.ugurbuga.blockwise.blocklogic.ui.ScoresScreen
 import com.ugurbuga.blockwise.blocklogic.ui.SettingsScreen
 import com.ugurbuga.blockwise.blocklogic.ui.ShapesPreviewScreen
-import com.ugurbuga.blockwise.blocklogic.domain.Difficulty
 import com.ugurbuga.blockwise.blocklogic.domain.GameModeKey
-import com.ugurbuga.blockwise.blocklogic.domain.GridSize
+import com.ugurbuga.blockwise.blocklogic.domain.PlayMode
+import com.ugurbuga.blockwise.blocklogic.domain.customModeKey
+import com.ugurbuga.blockwise.blocklogic.domain.quickPlayModeKey
 import com.ugurbuga.blockwise.navigation.AppRootComponent
 import com.ugurbuga.blockwise.navigation.subscribeAsState
 import com.ugurbuga.blockwise.ui.theme.BlockWiseTheme
@@ -64,13 +65,12 @@ internal fun screenStateKey(screen: AppScreen, gameSessionKey: Int): String {
 
 internal fun scrollStateKey(
     screen: AppScreen,
-    selectedSize: GridSize,
-    selectedDifficulty: Difficulty,
+    selectedMode: GameModeKey,
 ): String {
     return when (screen) {
         AppScreen.LevelSelection -> AppScreen.LevelSelection.name
-        AppScreen.Game -> "${AppScreen.Game.name}:${selectedSize.value}:${selectedDifficulty.name}"
-        AppScreen.Rules -> "${AppScreen.Rules.name}:${selectedSize.value}:${selectedDifficulty.name}"
+        AppScreen.Game -> "${AppScreen.Game.name}:${selectedMode.playMode.name}:${selectedMode.gridSize.value}:${selectedMode.difficulty.name}"
+        AppScreen.Rules -> "${AppScreen.Rules.name}:${selectedMode.playMode.name}:${selectedMode.gridSize.value}:${selectedMode.difficulty.name}"
         AppScreen.Scores -> AppScreen.Scores.name
         AppScreen.Settings -> AppScreen.Settings.name
         AppScreen.ShapesPreview -> AppScreen.ShapesPreview.name
@@ -95,8 +95,9 @@ fun App() {
     BlockWiseTheme(themeMode = appThemeMode, colorPalette = appColorPalette) {
         val navigation = remember { AppRootComponent() }
         val childStack by navigation.childStack.subscribeAsState()
-        var selectedSize by remember { mutableStateOf(initializeSelectedGridSize()) }
-        var selectedDifficulty by remember { mutableStateOf(initializeSelectedDifficulty()) }
+        var selectedPlayMode by remember { mutableStateOf(initializeSelectedPlayMode()) }
+        var selectedCustomSize by remember { mutableStateOf(initializeSelectedGridSize()) }
+        var selectedCustomDifficulty by remember { mutableStateOf(initializeSelectedDifficulty()) }
         var appLanguage by rememberSaveable { mutableStateOf(initializeAppLanguage()) }
         val pageScrollOffsets = rememberSaveable(
             saver = mapSaver(
@@ -119,13 +120,21 @@ fun App() {
             }
         }
         val currentChild = childStack.active.instance
+        val selectedGameMode = remember(selectedPlayMode, selectedCustomSize, selectedCustomDifficulty) {
+            when (selectedPlayMode) {
+                PlayMode.QuickPlay -> quickPlayModeKey()
+                PlayMode.Custom -> customModeKey(
+                    gridSize = selectedCustomSize,
+                    difficulty = selectedCustomDifficulty,
+                )
+            }
+        }
 
-        fun recordBestScore(size: GridSize, difficulty: Difficulty, score: Int) {
-            val key = GameModeKey(size, difficulty)
-            val previousBest = bestScores[key]
+        fun recordBestScore(mode: GameModeKey, score: Int) {
+            val previousBest = bestScores[mode]
             if (BestScoreStore.shouldSaveBest(previousBest, score)) {
-                bestScores[key] = score
-                BestScoreStore.saveBestScore(key, score)
+                bestScores[mode] = score
+                BestScoreStore.saveBestScore(mode, score)
             }
         }
 
@@ -203,21 +212,25 @@ fun App() {
                         ) {
                             when (currentChild) {
                                 AppRootComponent.Child.LevelSelection -> {
-                                    val levelSelectionScrollKey = scrollStateKey(
-                                        AppScreen.LevelSelection,
-                                        selectedSize,
-                                        selectedDifficulty,
-                                    )
                                     LevelSelectionScreen(
                                         modifier = Modifier.fillMaxSize(),
-                                        selectedSize = selectedSize,
-                                        selectedDifficulty = selectedDifficulty,
-                                        onSizeSelected = {
-                                            selectedSize = it
+                                        selectedPlayMode = selectedPlayMode,
+                                        customGridSize = selectedCustomSize,
+                                        customDifficulty = selectedCustomDifficulty,
+                                        onPreviewModeSelected = { playMode ->
+                                            selectedPlayMode = playMode
+                                            LevelSelectionStore.saveSelectedPlayMode(playMode)
+                                        },
+                                        onCustomGridSizeSelected = {
+                                            selectedPlayMode = PlayMode.Custom
+                                            LevelSelectionStore.saveSelectedPlayMode(PlayMode.Custom)
+                                            selectedCustomSize = it
                                             LevelSelectionStore.saveSelectedGridSize(it)
                                         },
-                                        onDifficultySelected = {
-                                            selectedDifficulty = it
+                                        onCustomDifficultySelected = {
+                                            selectedPlayMode = PlayMode.Custom
+                                            LevelSelectionStore.saveSelectedPlayMode(PlayMode.Custom)
+                                            selectedCustomDifficulty = it
                                             LevelSelectionStore.saveSelectedDifficulty(it)
                                         },
                                         onOpenRules = {
@@ -232,17 +245,21 @@ fun App() {
                                         onOpenSettings = {
                                             navigation.openSettings()
                                         },
-                                        onPlay = {
+                                        onPlayQuickPlay = {
+                                            selectedPlayMode = PlayMode.QuickPlay
+                                            LevelSelectionStore.saveSelectedPlayMode(PlayMode.QuickPlay)
                                             navigation.openGame()
                                         },
-                                        bestScoreForSelection = bestScores[GameModeKey(
-                                            selectedSize,
-                                            selectedDifficulty
-                                        )],
-                                        initialScroll = pageScrollOffsets[levelSelectionScrollKey]
+                                        onPlayCustom = {
+                                            selectedPlayMode = PlayMode.Custom
+                                            LevelSelectionStore.saveSelectedPlayMode(PlayMode.Custom)
+                                            navigation.openGame()
+                                        },
+                                        bestScoreForSelection = bestScores[selectedGameMode],
+                                        initialScroll = pageScrollOffsets[AppScreen.LevelSelection.name]
                                             ?: 0,
                                         onScrollChanged = {
-                                            pageScrollOffsets[levelSelectionScrollKey] = it
+                                            pageScrollOffsets[AppScreen.LevelSelection.name] = it
                                         },
                                     )
                                 }
@@ -250,24 +267,23 @@ fun App() {
                                 is AppRootComponent.Child.Game -> {
                                     BlockLogicScreen(
                                         modifier = Modifier.fillMaxSize(),
-                                        initialSize = selectedSize,
-                                        initialDifficulty = selectedDifficulty,
+                                        initialMode = selectedGameMode,
                                         sessionKey = currentChild.sessionKey.toString(),
                                         onMenu = { navigation.returnToRoot() },
-                                        onRecordScore = ::recordBestScore,
+                                        onRecordScore = { mode, score ->
+                                            recordBestScore(mode, score)
+                                        },
                                     )
                                 }
 
                                 AppRootComponent.Child.Rules -> {
                                     val rulesScrollKey = scrollStateKey(
                                         AppScreen.Rules,
-                                        selectedSize,
-                                        selectedDifficulty,
+                                        selectedGameMode,
                                     )
                                     RulesScreen(
                                         modifier = Modifier.fillMaxSize(),
-                                        gridSize = selectedSize,
-                                        difficulty = selectedDifficulty,
+                                        gameMode = selectedGameMode,
                                         onBack = { navigation.onBack() },
                                         initialScroll = pageScrollOffsets[rulesScrollKey] ?: 0,
                                         onScrollChanged = {
@@ -277,11 +293,7 @@ fun App() {
                                 }
 
                                 AppRootComponent.Child.Scores -> {
-                                    val scoresScrollKey = scrollStateKey(
-                                        AppScreen.Scores,
-                                        selectedSize,
-                                        selectedDifficulty,
-                                    )
+                                    val scoresScrollKey = scrollStateKey(AppScreen.Scores, selectedGameMode)
                                     ScoresScreen(
                                         modifier = Modifier.fillMaxSize(),
                                         bestScores = bestScores,
@@ -294,11 +306,7 @@ fun App() {
                                 }
 
                                 AppRootComponent.Child.Settings -> {
-                                    val settingsScrollKey = scrollStateKey(
-                                        AppScreen.Settings,
-                                        selectedSize,
-                                        selectedDifficulty,
-                                    )
+                                    val settingsScrollKey = scrollStateKey(AppScreen.Settings, selectedGameMode)
                                     SettingsScreen(
                                         modifier = Modifier.fillMaxSize(),
                                         selectedLanguage = appLanguage,

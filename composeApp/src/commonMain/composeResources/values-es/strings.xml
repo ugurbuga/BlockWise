@@ -63,6 +63,12 @@
     <string name="menu">Menú</string>
     <string name="play">Jugar</string>
     <string name="level_selection_title">Selección de nivel</string>
+    <string name="select_mode_title">Elige un modo</string>
+    <string name="game_mode_quick_play">Partida rápida</string>
+    <string name="game_mode_custom">Personalizado</string>
+    <string name="game_mode_quick_play_no_rules">Sin reglas</string>
+    <string name="game_mode_quick_play_desc">Tablero fijo de %1$dx%1$d, piezas de hasta %2$dx%2$d, sin reglas.</string>
+    <string name="game_mode_custom_desc">Última configuración: %1$s • %2$s • piezas de hasta %3$dx%3$d.</string>
     <string name="new_game">Nueva partida</string>
     <string name="moves_remaining">Movimientos restantes: %1$d</string>
     <string name="select_piece">Selecciona una pieza</string>

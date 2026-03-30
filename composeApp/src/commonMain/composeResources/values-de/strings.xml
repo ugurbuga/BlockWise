@@ -63,6 +63,12 @@
     <string name="menu">Menü</string>
     <string name="play">Spielen</string>
     <string name="level_selection_title">Levelauswahl</string>
+    <string name="select_mode_title">Modus auswählen</string>
+    <string name="game_mode_quick_play">Schnellspiel</string>
+    <string name="game_mode_custom">Benutzerdefiniert</string>
+    <string name="game_mode_quick_play_no_rules">Ohne Regeln</string>
+    <string name="game_mode_quick_play_desc">Festes %1$dx%1$d-Brett, Teile bis %2$dx%2$d, ohne Regeln.</string>
+    <string name="game_mode_custom_desc">Letzte Auswahl: %1$s • %2$s • Teile bis %3$dx%3$d.</string>
     <string name="new_game">Neues Spiel</string>
     <string name="moves_remaining">Verbleibende Züge: %1$d</string>
     <string name="select_piece">Wähle ein Teil aus</string>

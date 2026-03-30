@@ -65,6 +65,13 @@
     <string name="menu">Menü</string>
     <string name="play">Oyna</string>
     <string name="level_selection_title">Seviye Seçimi</string>
+    <string name="select_mode_title">Mod seç</string>
+    <string name="game_mode_quick_play">Hızlı Oyun</string>
+    <string name="game_mode_custom">Özel Oyun</string>
+    <string name="game_mode_quick_play_no_rules">Kuralsız</string>
+    <string name="game_mode_quick_play_desc">Sabit %1$dx%1$d tahta, en fazla %2$dx%2$d parçalar, kural yok.</string>
+    <string name="game_mode_custom_desc">Son seçim: %1$s • %2$s • en fazla %3$dx%3$d parçalar.</string>
+    <string name="pieces_up_to">En fazla %1$dx%1$d parçalar</string>
 
     <string name="new_game">Yeni Oyun</string>
     <string name="moves_remaining">Kalan hamle: %1$d</string>

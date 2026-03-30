@@ -63,6 +63,12 @@
     <string name="menu">القائمة</string>
     <string name="play">ابدأ</string>
     <string name="level_selection_title">اختيار المستوى</string>
+    <string name="select_mode_title">اختر وضعًا</string>
+    <string name="game_mode_quick_play">لعبة سريعة</string>
+    <string name="game_mode_custom">مخصص</string>
+    <string name="game_mode_quick_play_no_rules">بدون قواعد</string>
+    <string name="game_mode_quick_play_desc">لوح ثابت بحجم %1$dx%1$d، وقطع حتى %2$dx%2$d، بدون قواعد.</string>
+    <string name="game_mode_custom_desc">آخر إعداد: %1$s • %2$s • قطع حتى %3$dx%3$d.</string>
     <string name="new_game">لعبة جديدة</string>
     <string name="moves_remaining">الحركات المتبقية: %1$d</string>
     <string name="select_piece">اختر قطعة</string>

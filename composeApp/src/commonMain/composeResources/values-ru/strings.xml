@@ -63,6 +63,12 @@
     <string name="menu">Меню</string>
     <string name="play">Играть</string>
     <string name="level_selection_title">Выбор уровня</string>
+    <string name="select_mode_title">Выберите режим</string>
+    <string name="game_mode_quick_play">Быстрая игра</string>
+    <string name="game_mode_custom">Свой режим</string>
+    <string name="game_mode_quick_play_no_rules">Без правил</string>
+    <string name="game_mode_quick_play_desc">Фиксированное поле %1$dx%1$d, фигуры до %2$dx%2$d, без правил.</string>
+    <string name="game_mode_custom_desc">Последний выбор: %1$s • %2$s • фигуры до %3$dx%3$d.</string>
     <string name="new_game">Новая игра</string>
     <string name="moves_remaining">Осталось ходов: %1$d</string>
     <string name="select_piece">Выберите фигуру</string>

@@ -1,5 +1,7 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.gradle.api.tasks.JavaExec
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.gradle.api.tasks.Sync
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -95,8 +97,46 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "com.ugurbuga.blockwise"
+            packageName = "BlockWise"
             packageVersion = "1.0.0"
+            description = "BlockWise Compose Multiplatform puzzle game"
+            vendor = "ugurbuga"
+
+            macOS {
+                bundleID = "com.ugurbuga.blockwise"
+            }
         }
     }
 }
+
+tasks.withType<JavaExec>().configureEach {
+    if (name == "jvmRun") {
+        mainClass.set("com.ugurbuga.blockwise.MainKt")
+        doFirst {
+            mainClass.set("com.ugurbuga.blockwise.MainKt")
+        }
+    }
+}
+
+gradle.projectsEvaluated {
+    project(":composeApp").tasks.matching { it.name == "jvmRun" }.configureEach {
+        if (this is JavaExec) {
+            mainClass.set("com.ugurbuga.blockwise.MainKt")
+            doFirst {
+                mainClass.set("com.ugurbuga.blockwise.MainKt")
+            }
+        }
+    }
+}
+
+tasks.register<Sync>("exportMacosApp") {
+    group = "distribution"
+    description = "Builds the macOS .app bundle and copies it to the root dist/macos folder."
+    dependsOn("createDistributable")
+
+    from(layout.buildDirectory.dir("compose/binaries/main/app")) {
+        include("*.app/**")
+    }
+    into(rootProject.layout.projectDirectory.dir("dist/macos"))
+}
+

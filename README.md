@@ -95,6 +95,24 @@ In addition, the piece pool is constrained by difficulty (e.g., maximum shape di
 ./gradlew :composeApp:run
 ```
 
+### macOS `.app` çıktısı
+
+```sh
+./gradlew :composeApp:exportMacosApp
+```
+
+Bu komut macOS uygulama paketini şu klasöre kopyalar:
+
+```text
+dist/macos/BlockWise.app
+```
+
+İsterseniz Finder'dan çift tıklayarak veya terminalden şöyle açabilirsiniz:
+
+```sh
+open dist/macos/BlockWise.app
+```
+
 ### iOS
 
 - Open `iosApp/` in Xcode

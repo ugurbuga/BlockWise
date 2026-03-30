@@ -5,6 +5,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import org.jetbrains.compose.resources.StringResource
 
 import blockwise.composeapp.generated.resources.Res
+import blockwise.composeapp.generated.resources.app_title
 import blockwise.composeapp.generated.resources.back
 import blockwise.composeapp.generated.resources.board_block_style
 import blockwise.composeapp.generated.resources.board_block_style_flat
@@ -40,6 +41,12 @@ import blockwise.composeapp.generated.resources.drag_finger_offset_high
 import blockwise.composeapp.generated.resources.drag_finger_offset_low
 import blockwise.composeapp.generated.resources.drag_finger_offset_medium
 import blockwise.composeapp.generated.resources.drag_finger_offset_none
+import blockwise.composeapp.generated.resources.game_mode_custom
+import blockwise.composeapp.generated.resources.game_mode_custom_desc
+import blockwise.composeapp.generated.resources.game_over_no_moves
+import blockwise.composeapp.generated.resources.game_mode_quick_play
+import blockwise.composeapp.generated.resources.game_mode_quick_play_desc
+import blockwise.composeapp.generated.resources.game_mode_quick_play_no_rules
 import blockwise.composeapp.generated.resources.game_over
 import blockwise.composeapp.generated.resources.game_over_message
 import blockwise.composeapp.generated.resources.grid_size
@@ -70,7 +77,9 @@ import blockwise.composeapp.generated.resources.neon_pulse_speed_fast
 import blockwise.composeapp.generated.resources.neon_pulse_speed_normal
 import blockwise.composeapp.generated.resources.neon_pulse_speed_slow
 import blockwise.composeapp.generated.resources.new_game
+import blockwise.composeapp.generated.resources.no_moves_left
 import blockwise.composeapp.generated.resources.ok
+import blockwise.composeapp.generated.resources.pieces_up_to
 import blockwise.composeapp.generated.resources.play
 import blockwise.composeapp.generated.resources.rule_color_limit_row
 import blockwise.composeapp.generated.resources.rule_color_limit_col
@@ -105,6 +114,7 @@ import blockwise.composeapp.generated.resources.scores_best_for_mode
 import blockwise.composeapp.generated.resources.scores_empty
 import blockwise.composeapp.generated.resources.settings
 import blockwise.composeapp.generated.resources.scores_title
+import blockwise.composeapp.generated.resources.select_mode_title
 import blockwise.composeapp.generated.resources.select_piece
 import blockwise.composeapp.generated.resources.selected_mode_best_score
 import blockwise.composeapp.generated.resources.shapes_preview_section_2x2
@@ -135,6 +145,8 @@ internal fun localizedGetString(language: AppLanguage, resource: StringResource,
     fun gridSizeOptionValue(size: Int): String = "${size}x${size}"
 
     return when (resource) {
+        Res.string.app_title -> "BlockWise"
+
         Res.string.score -> when (language) {
             AppLanguage.English -> "Score: ${intArg(0)}"
             AppLanguage.Turkish -> "Skor: ${intArg(0)}"
@@ -727,6 +739,76 @@ internal fun localizedGetString(language: AppLanguage, resource: StringResource,
             AppLanguage.Arabic -> "اختيار المستوى"
         }
 
+        Res.string.select_mode_title -> when (language) {
+            AppLanguage.English -> "Choose a mode"
+            AppLanguage.Turkish -> "Mod seç"
+            AppLanguage.Spanish -> "Elige un modo"
+            AppLanguage.French -> "Choisissez un mode"
+            AppLanguage.German -> "Modus auswählen"
+            AppLanguage.Russian -> "Выберите режим"
+            AppLanguage.Arabic -> "اختر وضعًا"
+        }
+
+        Res.string.game_mode_quick_play -> when (language) {
+            AppLanguage.English -> "Quick Play"
+            AppLanguage.Turkish -> "Hızlı Oyun"
+            AppLanguage.Spanish -> "Partida rápida"
+            AppLanguage.French -> "Partie rapide"
+            AppLanguage.German -> "Schnellspiel"
+            AppLanguage.Russian -> "Быстрая игра"
+            AppLanguage.Arabic -> "لعبة سريعة"
+        }
+
+        Res.string.game_mode_custom -> when (language) {
+            AppLanguage.English -> "Custom"
+            AppLanguage.Turkish -> "Özel Oyun"
+            AppLanguage.Spanish -> "Personalizado"
+            AppLanguage.French -> "Personnalisé"
+            AppLanguage.German -> "Benutzerdefiniert"
+            AppLanguage.Russian -> "Свой режим"
+            AppLanguage.Arabic -> "مخصص"
+        }
+
+        Res.string.game_mode_quick_play_no_rules -> when (language) {
+            AppLanguage.English -> "No rules"
+            AppLanguage.Turkish -> "Kuralsız"
+            AppLanguage.Spanish -> "Sin reglas"
+            AppLanguage.French -> "Sans règles"
+            AppLanguage.German -> "Ohne Regeln"
+            AppLanguage.Russian -> "Без правил"
+            AppLanguage.Arabic -> "بدون قواعد"
+        }
+
+        Res.string.game_mode_quick_play_desc -> when (language) {
+            AppLanguage.English -> "Fixed ${gridSizeOptionValue(intArg(0))} board, pieces up to ${gridSizeOptionValue(intArg(1))}, no rules."
+            AppLanguage.Turkish -> "Sabit ${gridSizeOptionValue(intArg(0))} tahta, en fazla ${gridSizeOptionValue(intArg(1))} parçalar, kural yok."
+            AppLanguage.Spanish -> "Tablero fijo de ${gridSizeOptionValue(intArg(0))}, piezas de hasta ${gridSizeOptionValue(intArg(1))}, sin reglas."
+            AppLanguage.French -> "Plateau fixe de ${gridSizeOptionValue(intArg(0))}, pièces jusqu’à ${gridSizeOptionValue(intArg(1))}, sans règles."
+            AppLanguage.German -> "Festes ${gridSizeOptionValue(intArg(0))}-Brett, Teile bis ${gridSizeOptionValue(intArg(1))}, ohne Regeln."
+            AppLanguage.Russian -> "Фиксированное поле ${gridSizeOptionValue(intArg(0))}, фигуры до ${gridSizeOptionValue(intArg(1))}, без правил."
+            AppLanguage.Arabic -> "لوح ثابت بحجم ${gridSizeOptionValue(intArg(0))}، وقطع حتى ${gridSizeOptionValue(intArg(1))}، بدون قواعد."
+        }
+
+        Res.string.game_mode_custom_desc -> when (language) {
+            AppLanguage.English -> "Last setup: ${textArg(0)} • ${textArg(1)} • pieces up to ${gridSizeOptionValue(intArg(2))}."
+            AppLanguage.Turkish -> "Son seçim: ${textArg(0)} • ${textArg(1)} • en fazla ${gridSizeOptionValue(intArg(2))} parçalar."
+            AppLanguage.Spanish -> "Última configuración: ${textArg(0)} • ${textArg(1)} • piezas de hasta ${gridSizeOptionValue(intArg(2))}."
+            AppLanguage.French -> "Dernière configuration : ${textArg(0)} • ${textArg(1)} • pièces jusqu’à ${gridSizeOptionValue(intArg(2))}."
+            AppLanguage.German -> "Letzte Auswahl: ${textArg(0)} • ${textArg(1)} • Teile bis ${gridSizeOptionValue(intArg(2))}."
+            AppLanguage.Russian -> "Последний выбор: ${textArg(0)} • ${textArg(1)} • фигуры до ${gridSizeOptionValue(intArg(2))}."
+            AppLanguage.Arabic -> "آخر إعداد: ${textArg(0)} • ${textArg(1)} • قطع حتى ${gridSizeOptionValue(intArg(2))}."
+        }
+
+        Res.string.pieces_up_to -> when (language) {
+            AppLanguage.English -> "Pieces up to ${gridSizeOptionValue(intArg(0))}"
+            AppLanguage.Turkish -> "En fazla ${gridSizeOptionValue(intArg(0))} parçalar"
+            AppLanguage.Spanish -> "Piezas de hasta ${gridSizeOptionValue(intArg(0))}"
+            AppLanguage.French -> "Pièces jusqu’à ${gridSizeOptionValue(intArg(0))}"
+            AppLanguage.German -> "Teile bis ${gridSizeOptionValue(intArg(0))}"
+            AppLanguage.Russian -> "Фигуры до ${gridSizeOptionValue(intArg(0))}"
+            AppLanguage.Arabic -> "قطع حتى ${gridSizeOptionValue(intArg(0))}"
+        }
+
         Res.string.shapes_preview_title -> when (language) {
             AppLanguage.English -> "Shapes"
             AppLanguage.Turkish -> "Şekiller"
@@ -881,6 +963,26 @@ internal fun localizedGetString(language: AppLanguage, resource: StringResource,
             AppLanguage.German -> "Für dieses Spiel sind keine gültigen Züge mehr übrig."
             AppLanguage.Russian -> "Для этой игры больше не осталось допустимых ходов."
             AppLanguage.Arabic -> "لا توجد حركات صالحة متبقية لهذه اللعبة."
+        }
+
+        Res.string.no_moves_left -> when (language) {
+            AppLanguage.English -> "No valid moves left."
+            AppLanguage.Turkish -> "Kalan parçalar için geçerli hamle yok."
+            AppLanguage.Spanish -> "No quedan movimientos válidos."
+            AppLanguage.French -> "Il n’y a plus de coups valides."
+            AppLanguage.German -> "Keine gültigen Züge mehr übrig."
+            AppLanguage.Russian -> "Допустимых ходов больше нет."
+            AppLanguage.Arabic -> "لا توجد حركات صالحة متبقية."
+        }
+
+        Res.string.game_over_no_moves -> when (language) {
+            AppLanguage.English -> "${textArg(0)}: ${textArg(1)}"
+            AppLanguage.Turkish -> "${textArg(0)}: ${textArg(1)}"
+            AppLanguage.Spanish -> "${textArg(0)}: ${textArg(1)}"
+            AppLanguage.French -> "${textArg(0)} : ${textArg(1)}"
+            AppLanguage.German -> "${textArg(0)}: ${textArg(1)}"
+            AppLanguage.Russian -> "${textArg(0)}: ${textArg(1)}"
+            AppLanguage.Arabic -> "${textArg(0)}: ${textArg(1)}"
         }
 
         Res.string.ok -> when (language) {

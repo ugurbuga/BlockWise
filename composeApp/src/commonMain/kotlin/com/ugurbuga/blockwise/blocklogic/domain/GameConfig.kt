@@ -1,8 +1,29 @@
 package com.ugurbuga.blockwise.blocklogic.domain
 
+enum class PlayMode {
+    QuickPlay,
+    Custom,
+}
+
 data class GameModeKey(
+    val playMode: PlayMode,
     val gridSize: GridSize,
     val difficulty: Difficulty,
+)
+
+fun quickPlayModeKey(): GameModeKey = GameModeKey(
+    playMode = PlayMode.QuickPlay,
+    gridSize = GridSize(10),
+    difficulty = Difficulty.Easy,
+)
+
+fun customModeKey(
+    gridSize: GridSize,
+    difficulty: Difficulty,
+): GameModeKey = GameModeKey(
+    playMode = PlayMode.Custom,
+    gridSize = gridSize,
+    difficulty = difficulty,
 )
 
 data class DifficultyConfig(
@@ -39,7 +60,49 @@ fun supportedGridSizes(): List<GridSize> = listOf(8, 10, 12, 14).map(::GridSize)
 
 fun supportedDifficulties(): List<Difficulty> = Difficulty.entries
 
+fun resolveGameConfig(mode: GameModeKey): GameConfig {
+    return when (mode.playMode) {
+        PlayMode.QuickPlay -> {
+            val fixedMode = quickPlayModeKey()
+            val maxShapeDimension = 3
+            GameConfig(
+                mode = fixedMode,
+                difficultyConfig = DifficultyConfig(
+                    gridSize = fixedMode.gridSize.value,
+                    maxPieceLevel = 3,
+                    maxSameColorRatio = null,
+                    maxAdjacentSameColor = null,
+                    minColorVariety = null,
+                    moveLimit = null,
+                    preFilledRatio = 0f,
+                    lockedCellsRatio = 0f,
+                ),
+                rules = GameRules(),
+                availableShapes = Shapes.forComplexity(3)
+                    .filter { shape ->
+                        val width = shape.cells.maxOf { it.dx } + 1
+                        val height = shape.cells.maxOf { it.dy } + 1
+                        width <= maxShapeDimension && height <= maxShapeDimension
+                    },
+                maxShapeDimension = maxShapeDimension,
+            )
+        }
+
+        PlayMode.Custom -> resolveCustomGameConfig(
+            gridSize = mode.gridSize,
+            difficulty = mode.difficulty,
+        )
+    }
+}
+
 fun resolveGameConfig(
+    gridSize: GridSize,
+    difficulty: Difficulty,
+): GameConfig {
+    return resolveCustomGameConfig(gridSize = gridSize, difficulty = difficulty)
+}
+
+private fun resolveCustomGameConfig(
     gridSize: GridSize,
     difficulty: Difficulty,
 ): GameConfig {
@@ -107,7 +170,7 @@ fun resolveGameConfig(
         ?.coerceAtLeast(maxShapeDimension)
 
     return GameConfig(
-        mode = GameModeKey(gridSize = gridSize, difficulty = difficulty),
+        mode = customModeKey(gridSize = gridSize, difficulty = difficulty),
         difficultyConfig = difficultyConfig,
         rules = GameRules(
             maxSameColorPerRow = resolvedLimit,
@@ -127,9 +190,9 @@ fun resolveGameConfig(
 }
 
 fun allGameModes(): List<GameModeKey> {
-    return supportedGridSizes().flatMap { size ->
+    return listOf(quickPlayModeKey()) + supportedGridSizes().flatMap { size ->
         supportedDifficulties().map { difficulty ->
-            GameModeKey(gridSize = size, difficulty = difficulty)
+            customModeKey(gridSize = size, difficulty = difficulty)
         }
     }
 }

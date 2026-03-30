@@ -19,8 +19,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,9 +27,11 @@ import androidx.compose.ui.unit.dp
 import com.ugurbuga.blockwise.LocalBlockGapSpacing
 import com.ugurbuga.blockwise.localizedStringResource as stringResource
 import com.ugurbuga.blockwise.blocklogic.domain.BlockColor
+import com.ugurbuga.blockwise.blocklogic.domain.GameModeKey
+import com.ugurbuga.blockwise.blocklogic.domain.Piece
+import com.ugurbuga.blockwise.blocklogic.domain.customModeKey
 import com.ugurbuga.blockwise.blocklogic.domain.Difficulty
 import com.ugurbuga.blockwise.blocklogic.domain.GridSize
-import com.ugurbuga.blockwise.blocklogic.domain.Piece
 import com.ugurbuga.blockwise.blocklogic.domain.resolveGameConfig
 import com.ugurbuga.blockwise.blocklogic.domain.Shapes
 import com.ugurbuga.blockwise.ui.theme.BlockWiseTheme
@@ -39,7 +39,6 @@ import com.ugurbuga.blockwise.ui.theme.toPaletteColor
 
 import blockwise.composeapp.generated.resources.Res
 import blockwise.composeapp.generated.resources.back
-import blockwise.composeapp.generated.resources.grid_size_option
 import blockwise.composeapp.generated.resources.rules_intro
 import blockwise.composeapp.generated.resources.rules_rule_1_desc_disabled
 import blockwise.composeapp.generated.resources.rules_rule_1_desc_enabled
@@ -67,14 +66,13 @@ import blockwise.composeapp.generated.resources.rules_title
 
 @Composable
 fun RulesScreen(
-    gridSize: GridSize,
-    difficulty: Difficulty,
+    gameMode: GameModeKey,
     onBack: () -> Unit,
     initialScroll: Int = 0,
     onScrollChanged: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val config = resolveGameConfig(gridSize, difficulty)
+    val config = resolveGameConfig(gameMode)
     val scrollState = rememberPersistedScrollState(
         initialScroll = initialScroll,
         onScrollChanged = onScrollChanged,
@@ -123,8 +121,8 @@ fun RulesScreen(
             Text(
                 text = stringResource(
                     Res.string.rules_current_mode,
-                    stringResource(Res.string.grid_size_option, gridSize.value),
-                    difficultyLabel(difficulty)
+                    playModeLabel(gameMode.playMode),
+                    gameModeSecondaryLabel(gameMode),
                 ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -275,8 +273,7 @@ private fun PiecePreviewSmall(piece: Piece) {
 private fun RulesScreenPreview() {
     BlockWiseTheme {
         RulesScreen(
-            gridSize = GridSize(12),
-            difficulty = Difficulty.Hard,
+            gameMode = customModeKey(GridSize(12), Difficulty.Hard),
             onBack = {},
         )
     }

@@ -87,8 +87,9 @@ import com.ugurbuga.blockwise.localizedStringResource as stringResource
 import com.ugurbuga.blockwise.blocklogic.domain.BlockColor
 import com.ugurbuga.blockwise.blocklogic.domain.CellCoord
 import com.ugurbuga.blockwise.blocklogic.domain.CellOffset
-import com.ugurbuga.blockwise.blocklogic.domain.GameEngine
 import com.ugurbuga.blockwise.blocklogic.domain.Difficulty
+import com.ugurbuga.blockwise.blocklogic.domain.GameEngine
+import com.ugurbuga.blockwise.blocklogic.domain.GameModeKey
 import com.ugurbuga.blockwise.blocklogic.domain.GameRules
 import com.ugurbuga.blockwise.blocklogic.domain.GridSize
 import com.ugurbuga.blockwise.blocklogic.domain.Grid
@@ -527,16 +528,15 @@ private fun buildDragLogMessage(
 @Composable
 fun BlockLogicScreen(
     modifier: Modifier = Modifier,
-    initialSize: GridSize,
-    initialDifficulty: Difficulty,
+    initialMode: GameModeKey,
     sessionKey: String,
     onMenu: () -> Unit,
-    onRecordScore: (GridSize, Difficulty, Int) -> Unit,
+    onRecordScore: (GameModeKey, Int) -> Unit,
 ) {
     val vm: BlockLogicViewModel = viewModel(key = sessionKey) {
         BlockLogicViewModel(
-            initialSize = initialSize,
-            initialDifficulty = initialDifficulty,
+            initialSize = initialMode.gridSize,
+            initialDifficulty = initialMode.difficulty,
         )
     }
     val state by vm.uiState.collectAsState()
@@ -550,7 +550,7 @@ fun BlockLogicScreen(
     var hasRecordedGameOverScore by remember(sessionKey) { mutableStateOf(false) }
 
     fun recordCurrentScore() {
-        onRecordScore(state.gridSize, state.difficulty, state.score)
+        onRecordScore(initialMode, state.score)
     }
 
     fun dismissPlacementMessage() {

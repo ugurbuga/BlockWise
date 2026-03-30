@@ -63,6 +63,13 @@
     <string name="menu">Menu</string>
     <string name="play">Play</string>
     <string name="level_selection_title">Level Selection</string>
+    <string name="select_mode_title">Choose a mode</string>
+    <string name="game_mode_quick_play">Quick Play</string>
+    <string name="game_mode_custom">Custom</string>
+    <string name="game_mode_quick_play_no_rules">No rules</string>
+    <string name="game_mode_quick_play_desc">Fixed %1$dx%1$d board, pieces up to %2$dx%2$d, no rules.</string>
+    <string name="game_mode_custom_desc">Last setup: %1$s • %2$s • pieces up to %3$dx%3$d.</string>
+    <string name="pieces_up_to">Pieces up to %1$dx%1$d</string>
     <string name="new_game">New Game</string>
     <string name="moves_remaining">Moves left: %1$d</string>
     <string name="select_piece">Select a piece</string>
